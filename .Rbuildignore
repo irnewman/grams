@@ -1,0 +1,11 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^anagram_data$
+^cache$
+^data-raw$
+^dev$
+^downloads$
+^tables$
+^\.positai$
+^\.claude$
+^LICENSE\.md$

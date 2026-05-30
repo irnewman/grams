@@ -1,0 +1,153 @@
+---
+title: "Articulability"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Sonority scoring}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+library(grams)
+```
+
+## Introduction
+
+This vignette is unfinished.
+
+<!-- 
+  PROSE TO WRITE:
+  - What is sonority scoring and why does it matter for anagram research?
+  - The core problem: anagram candidates vary enormously in how word-like they
+    sound, and selecting stimuli without controlling for this introduces noise.
+  - How the sonority score is used in {grams}: feeds into compute_string_indices()
+    and the Mahalanobis classifier.
+-->
+
+## The sonority hierarchy
+
+Sonority scoring in {grams} is based on a six-level hierarchy, from least to most sonorous:
+
+| Level | Class | ARPAbet symbols | Example |
+|---|---|---|---|
+| 0 | Plosive | T, P, K, B, D, G | [t] tip, [p] page |
+| 1 | Fricative | F, TH, SH, CH, S, DH, ZH, V, JH, Z, HH | [f] fat, [s] sarah |
+| 2 | Nasal | N, M, NG | [n] net, [m] man |
+| 3 | Lateral | L | [l] live |
+| 4 | Rhotic | R | [r] run |
+| 5 | Vowel | IH, UH, EH, AW, AH, AE, AA, AY, AO, ER, EY, IY, OW, OY, UW | [i] it, [u] boot |
+
+Glides (W, Y) are treated as vowels (level 5) in the hierarchy.
+
+<!--
+  PROSE TO WRITE:
+  - Brief linguistic justification for the hierarchy ordering
+  - How the hierarchy is used to compute the sonority score for a string
+    (e.g. sonority sequencing principle, peaks and slopes)
+  - What the raw score represents before penalty adjustment
+-->
+
+## Phonotactic rules
+
+Pronounceability is also evaluated against a set of phonotactic rules for English
+onsets and codas. Clusters are classified as either **illegal** (never occurring in
+English) or **rare** (occurring in very few words).
+
+### Onset rules
+
+Onsets are evaluated after stripping any leading vowels. The following onset
+exceptions are permitted regardless of other rules: `SPL`, `SPR`, `STR`, `SKR`, `SKW`.
+
+| Status | Cluster | Notes |
+|---|---|---|
+| Illegal | NG | /ŋ/ is illegal word-initially |
+| Illegal | SB, SD, SG | |
+| Illegal | DL, TL | |
+| Illegal | SR, ZR | |
+| Illegal | ZB, ZD, ZG | |
+| Illegal | NP, NGP, MT, NT, NK, ML | Nasal assimilation violations |
+| Illegal | KN, GN | Archaic onsets not used in modern English |
+| Rare | THR, SHR | |
+| Rare | PW, BW | |
+
+### Coda rules
+
+Codas are evaluated after stripping any trailing vowels. The following coda
+exceptions are permitted regardless of other rules: `NGTHS`, `MPST`.
+
+| Status | Cluster | Notes |
+|---|---|---|
+| Illegal | SB, SD, SG | |
+| Illegal | DL, TL | |
+| Illegal | SR, ZR | |
+| Illegal | PT, BD, GZ | |
+| Illegal | HH | Illegal word-finally |
+| Illegal | W, Y | Illegal word-finally |
+| Rare | MP, NT | |
+| Rare | LK, LD, RD, GD | |
+
+<!--
+  PROSE TO WRITE:
+  - How illegal vs. rare status affects the sonority score (penalty weights)
+  - Any linguistic sources or references for the rule set
+-->
+
+## Orthographic pre-screening
+
+{grams} includes an orthographic pre-screening step that applies to strings
+transcribed via grapheme-to-phoneme (g2p) conversion, where the transcription
+may obscure illegal letter-level clusters.
+
+<!--
+  PROSE TO WRITE:
+  - Explain the problem: g2p normalises orthography before transcription,
+    so illegal letter clusters (e.g. "ngb") may not surface as illegal
+    phoneme clusters in the transcription.
+  - How the pre-screening works: consonant-only trigram frequencies
+    (positional and non-positional) are used to penalise strings with
+    low-frequency consonant clusters.
+  - Why consonant-only trigrams: avoids false positives for pseudowords
+    with unusual but legal vowel-containing trigrams (e.g. "cheab").
+  - Known limitation: ngatu-type cases with illegal onsets followed
+    immediately by a vowel cannot be caught because all their trigrams
+    contain vowels.
+-->
+
+## Interpreting the sonority score
+
+<!--
+  PROSE TO WRITE:
+  - What a high score means (more word-like, better sonority sequencing)
+  - What a low score means (less pronounceable, more nonword-like)
+  - Rough empirical ranges if known, or note that calibration is pending
+  - How the score interacts with the Mahalanobis classifier
+    (one of five features used to classify strings as word/pseudoword/nonword)
+-->
+
+## Known limitations
+
+<!--
+  PROSE TO WRITE:
+  - Penalty weights for rare vs. illegal clusters are provisional and
+    have not yet been empirically calibrated against pronounceability ratings.
+  - The ngatu-type limitation (illegal onsets followed by vowels are not
+    caught by the consonant trigram screen).
+  - Any other edge cases or known failure modes worth documenting.
+-->
+
+## Full phoneme inventory
+
+For reference, the complete set of ARPAbet phonemes and their sonority
+classifications used in {grams}:
+
+```{r sonority-table, echo = FALSE}
+knitr::kable(
+  grams:::sonority_table,
+  col.names = c("Sonority level", "Class", "IPA", "Example", "ARPAbet"),
+  align = "clcll"
+)
+```

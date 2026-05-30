@@ -1,0 +1,13 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+hello.R
+temp_code.R
+/.quarto/
+.positai
+anagram_data/
+data-raw/
+dev/
+downloads/
+*.rds

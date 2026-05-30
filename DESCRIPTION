@@ -1,11 +1,43 @@
-Package: anagrams
+Package: grams
 Type: Package
-Title: What the Package Does (Title Case)
-Version: 0.1.0
-Author: Who wrote it
-Maintainer: The package maintainer <yourself@somewhere.net>
-Description: More about what it does (maybe more than one line)
-    Use four spaces when indenting paragraphs within the Description.
-License: What license is it under?
+Title: Generate Anagram Stimuli and Compute String Metrics for Psycholinguistic Research
+Version: 0.1.0.9000
+Authors@R: 
+    person("Ian R.", "Newman", email = "ian.newman@usask.ca", role = c("aut", "cre"))
+Description: Provides tools for generating, scoring, and selecting anagram stimuli
+    for use in psycholinguistic experiments. Includes functions for computing
+    orthographic, phonological, and lexical metrics for anagram candidates,
+    and selecting stimuli sets matched on relevant psycholinguistic dimensions.
+License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
+LazyDataCompression: xz
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 8.0.0
+VignetteBuilder: knitr
+Depends:
+    R (>= 4.1.0)
+Imports: 
+    arrangements,
+    dplyr,
+    DT,
+    ggplot2,
+    ggrepel,
+    miniUI,
+    purrr,
+    rappdirs,
+    shiny,
+    stringdist,
+    syllabifyr,
+    tibble,
+    tidyr
+Suggests:
+    knitr,
+    LexOPS,
+    reticulate,
+    rmarkdown,
+    scales
+URL: https://github.com/irnewman/grams
+BugReports: https://github.com/irnewman/grams/issues
+
+
