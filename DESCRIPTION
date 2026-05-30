@@ -37,6 +37,8 @@ Suggests:
     reticulate,
     rmarkdown,
     scales
+Remotes:
+  JackEdTaylor/LexOPS
 URL: https://github.com/irnewman/grams
 BugReports: https://github.com/irnewman/grams/issues
 
