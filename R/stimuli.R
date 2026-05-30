@@ -2206,7 +2206,8 @@ find_matched_unsolvable <- function(target_anagram,
   # check if candidate meets all criteria
   check_candidate <- function(candidate) {
     # must not have any dictionary anagrams (truly unsolvable)
-    anagrams <- find_dictionary_anagrams(candidate, sig_index = sig_index)
+    anagrams <- solve_anagram(candidate, sig_index = sig_index,
+                              include_self = TRUE)
 
     if (length(anagrams) > 0) {
       return(FALSE)

@@ -158,8 +158,6 @@ check_phonotactics <- function(df, rules = grams::phonotactic_rules)
             for (i in seq_len(nrow(coda_rules))) {
               rule_cluster <- coda_rules$cluster[i]
               if (grepl(rule_cluster, cluster, fixed = TRUE)) {
-                penalty <- if (coda_rules$penalty[i] == "illegal")
-                  penalty_illegal else penalty_rare
                 syll_total <- syll_total + 1L
                 break
               }
