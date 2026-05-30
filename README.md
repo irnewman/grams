@@ -2,9 +2,8 @@
 
 <!-- badges: start -->
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
-<!-- badges: end 
 [![R-CMD-check](https://github.com/irnewman/grams/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/irnewman/grams/actions/workflows/R-CMD-check.yaml)
--->
+<!-- badges: end -->
 
 > **[A Generative Reposity of Anagrams and Metrics, built from SUBTLEX]**
 
