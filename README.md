@@ -36,6 +36,13 @@ Some features require Python (for grapheme-to-phoneme transcription via g2p). If
 install.packages("reticulate")
 ```
 
+Then run:
+
+```r
+library(grams)
+phonetics_setup()
+```
+
 ## Overview
 
 {grams} core capabilities:
