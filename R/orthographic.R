@@ -14,11 +14,13 @@
 #'   or a character vector if output = "neighbours".
 #' @export
 orthographic_neighbours <- function(word,
-                                    dictionary = subtlex_uk$word,
+                                    dictionary = NULL,
                                     n          = 20,
                                     method     = "lv",
                                     output     = "both")
 {
+  if (is.null(dictionary)) dictionary <- subtlex_uk$word
+
   word       <- tolower(word)
   word_len   <- nchar(word)
   candidates <- dictionary[nchar(dictionary) %in%
@@ -50,9 +52,10 @@ orthographic_neighbours <- function(word,
 #' @export
 old_n <- function(word,
                   n          = 20,
-                  dictionary = subtlex_uk$word,
+                  dictionary = NULL,
                   method     = "lv")
 {
+  if (is.null(dictionary)) dictionary <- subtlex_uk$word
   orthographic_neighbours(word, dictionary, n = n, method = method,
                           output = "old")
 }
@@ -68,9 +71,10 @@ old_n <- function(word,
 #' @return Numeric OLD20 value.
 #' @export
 old20 <- function(word,
-                  dictionary = subtlex_uk$word,
+                  dictionary = NULL,
                   method     = "lv")
 {
+  if (is.null(dictionary)) dictionary <- subtlex_uk$word
   old_n(word, n = 20, dictionary = dictionary, method = method)
 }
 
@@ -85,9 +89,10 @@ old20 <- function(word,
 #' @export
 ed_n <- function(word,
                  n          = 1,
-                 dictionary = subtlex_uk$word,
+                 dictionary = NULL,
                  method     = "lv")
 {
+  if (is.null(dictionary)) dictionary <- subtlex_uk$word
   orthographic_neighbours(word, dictionary, n = n, method = method,
                           output = "ed")
 }
@@ -103,9 +108,10 @@ ed_n <- function(word,
 #' @return Numeric count of neighbours at edit distance 1.
 #' @export
 ed1 <- function(word,
-                dictionary = subtlex_uk$word,
+                dictionary = NULL,
                 method     = "lv")
 {
+  if (is.null(dictionary)) dictionary <- subtlex_uk$word
   ed_n(word, n = 1, dictionary = dictionary, method = method)
 }
 
@@ -118,9 +124,10 @@ ed1 <- function(word,
 #' @return Character vector of neighbouring words.
 #' @export
 orthographic_neighbours_list <- function(word,
-                                         dictionary = subtlex_uk$word,
+                                         dictionary = NULL,
                                          method     = "lv")
 {
+  if (is.null(dictionary)) dictionary <- subtlex_uk$word
   orthographic_neighbours(word, dictionary, n = 1, method = method,
                           output = "neighbours")
 }

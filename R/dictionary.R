@@ -18,7 +18,7 @@
 #' solve_anagram("eat", sig_index = my_index)
 #'
 #' @export
-build_signature_index <- function(dictionary = internal_dict)
+build_signature_index <- function(dictionary = grams::internal_dict)
 {
   sigs <- vapply(dictionary,
                  function(w) paste0(sort(strsplit(w, "")[[1]]), collapse = ""),
