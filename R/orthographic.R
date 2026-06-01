@@ -19,7 +19,7 @@ orthographic_neighbours <- function(word,
                                     method     = "lv",
                                     output     = "both")
 {
-  if (is.null(dictionary)) dictionary <- subtlex_uk$word
+  if (is.null(dictionary)) dictionary <- grams::subtlex_uk$word
 
   word       <- tolower(word)
   word_len   <- nchar(word)
@@ -55,7 +55,7 @@ old_n <- function(word,
                   dictionary = NULL,
                   method     = "lv")
 {
-  if (is.null(dictionary)) dictionary <- subtlex_uk$word
+  if (is.null(dictionary)) dictionary <- grams::subtlex_uk$word
   orthographic_neighbours(word, dictionary, n = n, method = method,
                           output = "old")
 }
@@ -74,7 +74,7 @@ old20 <- function(word,
                   dictionary = NULL,
                   method     = "lv")
 {
-  if (is.null(dictionary)) dictionary <- subtlex_uk$word
+  if (is.null(dictionary)) dictionary <- grams::subtlex_uk$word
   old_n(word, n = 20, dictionary = dictionary, method = method)
 }
 
@@ -92,7 +92,7 @@ ed_n <- function(word,
                  dictionary = NULL,
                  method     = "lv")
 {
-  if (is.null(dictionary)) dictionary <- subtlex_uk$word
+  if (is.null(dictionary)) dictionary <- grams::subtlex_uk$word
   orthographic_neighbours(word, dictionary, n = n, method = method,
                           output = "ed")
 }
@@ -111,7 +111,7 @@ ed1 <- function(word,
                 dictionary = NULL,
                 method     = "lv")
 {
-  if (is.null(dictionary)) dictionary <- subtlex_uk$word
+  if (is.null(dictionary)) dictionary <- grams::subtlex_uk$word
   ed_n(word, n = 1, dictionary = dictionary, method = method)
 }
 
@@ -127,7 +127,7 @@ orthographic_neighbours_list <- function(word,
                                          dictionary = NULL,
                                          method     = "lv")
 {
-  if (is.null(dictionary)) dictionary <- subtlex_uk$word
+  if (is.null(dictionary)) dictionary <- grams::subtlex_uk$word
   orthographic_neighbours(word, dictionary, n = 1, method = method,
                           output = "neighbours")
 }
