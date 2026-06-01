@@ -40,15 +40,15 @@ install.packages("reticulate")
 
 **Building frequency tables**: compute n-gram frequencies from any corpus specified by the user, as a word vector.
 
-**Solving anagrams.**: given a target string of letters, `solve_anagram` returns all valid dictionary anagrams using an internal lexicon built from multiple lexical sources (CMU, GCIDE, WordNet, SUBTLEX-UK). Users can specify their own dictionary if preferred. Call `build_sig_index` for fast lookups.
+**Solving anagrams**: given a target string of letters, `solve_anagram` returns all valid dictionary anagrams using an internal lexicon built from multiple lexical sources (CMU, GCIDE, WordNet, SUBTLEX-UK). Users can specify their own dictionary if preferred. Call `build_sig_index` for fast lookups.
 
-**Computing psycholinguistic metrics.**: `compute_string_indices()` computes lexical and sublexical metrics for any string. `compute_anagram_indices()` computes metrics regarding the correspondence between an anagram and its solution.
+**Computing psycholinguistic metrics**: `compute_string_indices()` computes lexical and sublexical metrics for any string. `compute_anagram_indices()` computes metrics regarding the correspondence between an anagram and its solution.
 
 **Anagram stimuli GUI**: in-progress, a graphical interface to generate and filter a set of stimuli, matched on user-specified metrics. 
 
 **Database tools**: a set of tools to 
 
-**Classifying strings.**: a Mahalanobis distance classifier that assigns strings to one of three categories, based on their similarity to the classifier multivariate distribution: `"word"`, `"pseudoword"`, or `"nonword"`.
+**Classifying strings**: a Mahalanobis distance classifier that assigns strings to one of three categories, based on their similarity to the classifier multivariate distribution: `"word"`, `"pseudoword"`, or `"nonword"`.
 
 ## GRAMS Database 
 
@@ -201,49 +201,52 @@ The database is hosted on the Open Science Framework: https://osf.io/j37sa
 
 For each word, up to 100 anagrams are computed, and a set of summary metrics are computed on those results.
 
-Solution 
-WordLength
-sSBFrank ,
-sMLBFrank 
-Nwords               
-Npseudowords         
-Nnonwords            
-
-aSBFmean            
-aSBFrange            
-aSBFmin             
-aSBFmax             
-
-aMLBFmean            
-aMLBFrange           
-aMLBFmin            
-aMLBFmax             
-
-aOLD20mean           
-aOLD20range          
-aOLD20min            
-aOLD20max            
-
-aArticulabilitymean       
-aArticulabilityrange       
-aArticulabilitymin         
-aArticulabilitymax         
-
-Movesmin             
-Movesmax             
-
-Nintactmin           
-Nintactmax           
-
-NpreservedBGmin      
-NpreservedBGmax      
-
-aNmorphemesmin       
-aNmorphemesmax       
+| Index | Description |
+|---|---|
+| Solution ||
+| WordLength ||
+| sSBFrank ||
+| sMLBFrank ||
+| Nwords ||              
+| Npseudowords ||         
+| Nnonwords ||           
+| aSBFmean  ||          
+| aSBFrange  ||          
+| aSBFmin ||            
+| aSBFmax  ||           
+| aMLBFmean ||           
+| aMLBFrange  ||         
+| aMLBFmin ||           
+| aMLBFmax ||            
+| aOLD20mean ||          
+| aOLD20range ||         
+| aOLD20min ||           
+| aOLD20max ||           
+| aArticulabilitymean ||      
+| aArticulabilityrange ||      
+| aArticulabilitymin ||        
+| aArticulabilitymax ||        
+| Movesmin ||            
+| Movesmax ||            
+| Nintactmin ||          
+| Nintactmax ||          
+| NpreservedBGmin ||     
+| NpreservedBGmax ||     
+| aNmorphemesmin ||      
+| aNmorphemesmax ||      
 
 ## "Articulability" Score
 
 An algorithm for computing an articulatory ease score. This algorithm and function still in development. Based on sonority scoring (plosives through vowels) and phonotactic rule violations.
+
+| Manner of Articulation | Sonority Hierarcy | Example |
+|---|---|---|
+| plosive | 0 |  [t], [p] |
+| fricative | 1 | [θ], [s] |
+| nasal | 2 | [m], [ŋ] |
+| lateral | 3 | [l] |
+| rhotic | 4 | [r] |
+| vowel | 5 | [æ], [j] |
 
 See the articulability vignette.
 
