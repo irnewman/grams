@@ -23,7 +23,7 @@ syllables <- function(word, output = "count")
   if (word %in% cmu$word) {
     # CMU
     source         <- "cmu"
-    pronunciations <- cmu$pronunciation[cmu$word == word]
+    pronunciations <- cmu$pronunciation[grams::cmu$word == word]
     syllabified    <- lapply(pronunciations, syllabifyr::syllabify)
     syll_counts    <- sapply(syllabified, function(s) max(s$syll))
     s              <- mean(syll_counts)
