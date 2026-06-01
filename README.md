@@ -11,8 +11,8 @@
 generating anagram stimuli. Developed with metareasoning experiments in
 mind, the package provides tools applicable across psycholinguistic domains. 
 It provides a pipeline for generating anagram candidates, computing 
-psycholinguistic indices, and classifying strings — with stimulus selection 
-tools in active development.
+psycholinguistic indices, and classifying strings. Stimulus selection 
+graphical interface is in active development.
 
 
 ## Status
@@ -28,7 +28,7 @@ Install the development version of {grams} from GitHub:
 devtools::install_github("irnewman/grams")
 ```
 
-Some features require Python (for grapheme-to-phoneme transcription via g2p). If you plan to use sonority scoring, you will also need the `reticulate` package and a working Python environment:
+Some features require Python (for grapheme-to-phoneme transcription via g2p). If you plan to use the `articulability` or `syllables` functions, you will also need the `reticulate` package and a working Python environment:
 
 ```r
 install.packages("reticulate")
@@ -36,17 +36,19 @@ install.packages("reticulate")
 
 ## Overview
 
-{grams} is organized around a few core capabilities:
+{grams} core capabilities:
 
-Building frequency tables, Computing metrics, GUI for stimuli lists and template, database building tools, classifier tools
+**Building frequency tables**: compute n-gram frequencies from any corpus specified by the user, as a word vector.
 
-**Solving anagrams.** Given a target word, `solve_anagram` returns all valid dictionary anagrams using an internal lexicon built from multiple lexical sources (CMU, GCIDE, WordNet, SUBTLEX-UK).
+**Solving anagrams.**: given a target string of letters, `solve_anagram` returns all valid dictionary anagrams using an internal lexicon built from multiple lexical sources (CMU, GCIDE, WordNet, SUBTLEX-UK). Users can specify their own dictionary if preferred. Call `build_sig_index` for fast lookups.
 
-**Computing psycholinguistic indices.** `compute_string_indices()` computes a full suite of lexical and sublexical measures for any string — not just dictionary words. `compute_anagram_indices()` extends this with source-word-relative measures.
+**Computing psycholinguistic metrics.**: `compute_string_indices()` computes lexical and sublexical metrics for any string. `compute_anagram_indices()` computes metrics regarding the correspondence between an anagram and its solution.
 
-**Classifying strings.** A Mahalanobis distance classifier assigns strings to one of three categories — `"word"`, `"pseudoword"`, or `"nonword"` — based on their similarity to the distribution of known English words across multiple psycholinguistic dimensions.
+**Anagram stimuli GUI**: in-progress, a graphical interface to generate and filter a set of stimuli, matched on user-specified metrics. 
 
-**Generating candidates.** `generate_anagram_candidates()` produces the full set of candidate strings for a given letter set, with indices computed for each.
+**Database tools**: a set of tools to 
+
+**Classifying strings.**: a Mahalanobis distance classifier that assigns strings to one of three categories, based on their similarity to the classifier multivariate distribution: `"word"`, `"pseudoword"`, or `"nonword"`.
 
 ## GRAMS Database 
 
