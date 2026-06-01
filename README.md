@@ -21,6 +21,8 @@ graphical interface is in active development.
 
 ## Installation
 
+Please note that the current package version has several dependencies, primarily as a result of the GUI feature.
+
 Install the development version of {grams} from GitHub:
 
 ```r
