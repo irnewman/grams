@@ -20,10 +20,10 @@ syllables <- function(word, output = "count")
   load_phonetics()
   word <- tolower(word)
 
-  if (word %in% cmu$word) {
+  if (word %in% grams::cmu$word) {
     # CMU
     source         <- "cmu"
-    pronunciations <- cmu$pronunciation[grams::cmu$word == word]
+    pronunciations <- grams::cmu$pronunciation[grams::cmu$word == word]
     syllabified    <- lapply(pronunciations, syllabifyr::syllabify)
     syll_counts    <- sapply(syllabified, function(s) max(s$syll))
     s              <- mean(syll_counts)
