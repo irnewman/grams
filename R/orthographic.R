@@ -12,6 +12,7 @@
 #'
 #' @return Numeric value, a data.frame if output = "both",
 #'   or a character vector if output = "neighbours".
+#' @export
 orthographic_neighbours <- function(word,
                                     dictionary = subtlex_uk$word,
                                     n          = 20,
@@ -46,6 +47,7 @@ orthographic_neighbours <- function(word,
 #' @param method Distance method passed to stringdist. Default is "lv".
 #'
 #' @return Numeric OLD-N value.
+#' @export
 old_n <- function(word,
                   n          = 20,
                   dictionary = subtlex_uk$word,
@@ -64,6 +66,7 @@ old_n <- function(word,
 #' @param method Distance method passed to stringdist. Default is "lv".
 #'
 #' @return Numeric OLD20 value.
+#' @export
 old20 <- function(word,
                   dictionary = subtlex_uk$word,
                   method     = "lv")
@@ -79,6 +82,7 @@ old20 <- function(word,
 #' @param method Distance method passed to stringdist. Default is "lv".
 #'
 #' @return Numeric count of neighbours at distance N.
+#' @export
 ed_n <- function(word,
                  n          = 1,
                  dictionary = subtlex_uk$word,
@@ -97,6 +101,7 @@ ed_n <- function(word,
 #' @param method Distance method passed to stringdist. Default is "lv".
 #'
 #' @return Numeric count of neighbours at edit distance 1.
+#' @export
 ed1 <- function(word,
                 dictionary = subtlex_uk$word,
                 method     = "lv")
@@ -111,6 +116,7 @@ ed1 <- function(word,
 #' @param method Distance method passed to stringdist. Default is "lv".
 #'
 #' @return Character vector of neighbouring words.
+#' @export
 orthographic_neighbours_list <- function(word,
                                          dictionary = subtlex_uk$word,
                                          method     = "lv")

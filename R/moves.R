@@ -5,6 +5,7 @@
 #' @param anagram Anagram of the solution word in string format.
 #'
 #' @return Numeric length of minimum moves to solve.
+#' @export
 count_moves <- function(solution, anagram)
 {
   sol_letters <- strsplit(toupper(solution), "")[[1]]

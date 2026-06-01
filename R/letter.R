@@ -8,6 +8,7 @@
 #' @param word A word or anagram in string format.
 #'
 #' @return Numeric count of vowels.
+#' @export
 n_vowels <- function(word)
 {
   sum(strsplit(toupper(word), "")[[1]] %in% .VOWELS)
@@ -18,6 +19,7 @@ n_vowels <- function(word)
 #' @param word A word or anagram in string format.
 #'
 #' @return Numeric count of consonants.
+#' @export
 n_consonants <- function(word)
 {
   nchar(word) - n_vowels(word)
@@ -28,6 +30,7 @@ n_consonants <- function(word)
 #' @param word A word or anagram in string format.
 #'
 #' @return Numeric ratio of vowels to word length.
+#' @export
 vowel_ratio <- function(word)
 {
   n_vowels(word) / nchar(word)
@@ -38,6 +41,7 @@ vowel_ratio <- function(word)
 #' @param word A word or anagram in string format.
 #'
 #' @return Character string, either "vowel" or "consonant".
+#' @export
 first_letter <- function(word)
 {
   ifelse(strsplit(toupper(word), "")[[1]][1] %in% .VOWELS, "vowel", "consonant")
@@ -49,6 +53,7 @@ first_letter <- function(word)
 #' @param word A word or anagram in string format.
 #'
 #' @return Character string, either "vowel" or "consonant".
+#' @export
 infreq_letter <- function(word)
 {
   any(strsplit(toupper(word), "")[[1]] %in% .UNCOMMON)
@@ -59,6 +64,7 @@ infreq_letter <- function(word)
 #' @param word A word or anagram in string format.
 #'
 #' @return Numeric count of unique letters.
+#' @export
 n_unique_letters <- function(word)
 {
   length(unique(strsplit(toupper(word), "")[[1]]))
@@ -69,6 +75,7 @@ n_unique_letters <- function(word)
 #' @param word A word or anagram in string format.
 #'
 #' @return Numeric ratio of distinct letters to word length.
+#' @export
 unique_letter_ratio <- function(word)
 {
   n_unique_letters(word) / nchar(word)
@@ -82,6 +89,7 @@ unique_letter_ratio <- function(word)
 #'
 #' @return Character vector of intact letters (uppercase) in left-to-right order
 #'   if output = "letters", or numeric vector of positions if output = "indices".
+#' @export
 intact_letters <- function(solution, anagram, output = "letters")
 {
   # determine letters of solution and anagram
@@ -108,6 +116,7 @@ intact_letters <- function(solution, anagram, output = "letters")
 #' @return Character vector of preserved bigrams (uppercase) in left-to-right
 #'   order if output = "bigrams", or numeric vector of starting positions if
 #'   output = "indices".
+#' @export
 preserved_bg <- function(solution, anagram, output = "bigrams")
 {
   sol <- strsplit(tolower(solution), "")[[1]]

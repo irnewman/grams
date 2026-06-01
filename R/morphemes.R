@@ -13,6 +13,7 @@
 #' @return Numeric count if output = "count", character vector of morphemes
 #'   in left-to-right order (uppercase) if output = "list", or numeric vector
 #'   of starting positions if output = "indices".
+#' @export
 find_morphemes <- function(word, output = "list", morph_list = NULL)
 {
   if (is.null(morph_list)) morph_list <- morpheme_list
