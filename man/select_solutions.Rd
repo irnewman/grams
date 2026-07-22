@@ -30,7 +30,7 @@ if multiple variables specified.}
 \item{control_for}{Named list of variables to match across conditions. Each element
 is a variable name with a 2-element tolerance vector \code{c(lower, upper)}.
 Example: \code{list(Length = c(-1, 1), OLD20 = c(-0.5, 0.5))}. If NULL and not
-splitting by Zipf, defaults to controlling Zipf within ±0.2. Cannot control
+splitting by Zipf, defaults to controlling Zipf within +/- 0.2. Cannot control
 for a variable you are splitting by.}
 
 \item{n}{Number of items to generate per condition cell. Use "all" to generate
@@ -67,7 +67,7 @@ specific values (e.g., \code{POS = c("noun", "verb")}).
 
 \strong{Splitting}: Creates experimental conditions. Multiple splits create crossed
 designs. Example: splitting by Zipf (high/low) and OLD20 (sparse/dense) creates
-a 2×2 design with 4 conditions.
+a 2x2 design with 4 conditions.
 
 \strong{Controlling}: Ensures conditions are matched on nuisance variables. Default
 controls for word frequency (Zipf) unless you're splitting by it.

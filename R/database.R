@@ -124,7 +124,11 @@ compute_string_indices <- function(strings,
       error = function(e) NULL
     )
   })
-  morpheme_list <- lapply(strings, function(p) find_morphemes(p, output = "list"))
+  morpheme_list <- lapply(strings, function(p) find_morphemes(p,
+                                                              output = "list"))
+
+  # derive phonemes from already-computed syllable_data
+  phoneme_data <- sapply(strings, get_phonemes)
 
   # build data frame
   df <- data.frame(
@@ -140,6 +144,21 @@ compute_string_indices <- function(strings,
 
     # gtzero
     GTzero          = sapply(strings, function(s) gtzero(s, output = "prop")),
+
+    # phonotactic frequency
+    # note: return NA when phonemes are less than 2 required for biphone metric
+    SBPF  = sapply(phoneme_data, function(p) {
+      if (is.na(p)) return(NA_real_)
+      tryCatch(sbpf(p), error = function(e) NA_real_)
+    }),
+    MLBPF = sapply(phoneme_data, function(p) {
+      if (is.na(p)) return(NA_real_)
+      tryCatch(mlbpf(p), error = function(e) NA_real_)
+    }),
+
+    # phonotactic neighbourhood
+    PLD20 = sapply(phoneme_data, function(p) if (is.na(p)) NA_real_ else pld20(p)),
+    PED1  = sapply(phoneme_data, function(p) if (is.na(p)) NA_real_ else ped1(p)),
 
     # phonological
     Articulability        = mapply(function(s, sd) articulability(s, syllable_data = sd),
@@ -157,6 +176,11 @@ compute_string_indices <- function(strings,
 
     SyllableSource = sapply(syllable_data, function(x)
       if (is.null(x)) NA_character_ else x$source[1]),
+
+    Nphonemes = sapply(phoneme_data, function(p) {
+      if (is.na(p)) return(NA_integer_)
+      length(strsplit(p, " ")[[1]])
+    }),
 
     # string properties
     Nvowels          = sapply(strings, n_vowels),
@@ -192,6 +216,17 @@ compute_string_indices <- function(strings,
     df$STF    <- sapply(strings, stf)
     df$MLLF    <- sapply(strings, mllf)
     df$MLTF    <- sapply(strings, mltf)
+    # phonemic exploratory variants
+    df$SUPF   <- sapply(phoneme_data, function(p) if (is.na(p)) NA_real_ else supf(p))
+    df$STPF   <- sapply(phoneme_data, function(p) {
+      if (is.na(p)) return(NA_real_)
+      tryCatch(stpf(p), error = function(e) NA_real_)
+    })
+    df$MLUPF  <- sapply(phoneme_data, function(p) if (is.na(p)) NA_real_ else mlupf(p))
+    df$MLTPF  <- sapply(phoneme_data, function(p) {
+      if (is.na(p)) return(NA_real_)
+      tryCatch(mltpf(p), error = function(e) NA_real_)
+    })
   }
 
   df
@@ -236,6 +271,10 @@ compute_anagram_indices <- function(anagram,
     "MLBF" = "aMLBF",
     "OLD20" = "aOLD20",
     "ED1" = "aED1",
+    "SBPF" = "aSBPF",
+    "MLBPF" = "aMLBPF",
+    "PLD20" = "aPLD20",
+    "PED1" = "aPED1",
     "Articulability" = "aArticulability",
     "Nsyllables" = "aNsyllables",
     "SyllableSource" = "aSyllableSource",

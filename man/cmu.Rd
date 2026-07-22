@@ -5,8 +5,20 @@
 \alias{cmu}
 \title{CMU Pronouncing Dictionary}
 \format{
-A data frame with columns \code{word}, \code{pronunciation},
-\code{phonemes_stressed}, and \code{phonemes}.
+A data frame with the following columns:
+\describe{
+\item{word}{Lowercase orthographic word form.}
+\item{pronunciation}{Space-separated ARPAbet string with stress markers
+(e.g. \code{"K AE1 T"}).}
+\item{phonemes_stressed}{List-column of ARPAbet tokens with stress
+markers retained.}
+\item{phonemes}{List-column of ARPAbet tokens with stress markers
+stripped (e.g. \code{c("K", "AE", "T")}).}
+\item{phonemes_1char}{Single-character encoded phoneme string for use
+in phonological neighbourhood computation via \code{stringdist}
+(e.g. \code{"k@t"}).}
+\item{ipa}{IPA transcription string (e.g. \code{"kæt"}).}
+}
 }
 \source{
 \url{http://www.speech.cs.cmu.edu/cgi-bin/cmudict}
@@ -16,7 +28,9 @@ cmu
 }
 \description{
 A data frame of words and their phonemic transcriptions from the Carnegie
-Mellon University Pronouncing Dictionary, used for syllabification and
-sonority scoring.
+Mellon University Pronouncing Dictionary, used for syllabification,
+sonority scoring, and phonological neighbourhood computation. Junk entries
+(punctuation-naming artifacts and digit-leading strings) have been removed,
+retaining 133,794 of the original 133,853 entries.
 }
 \keyword{datasets}

@@ -52,7 +52,7 @@ or a single \code{freq} column when \code{positional = FALSE}.
 Counts how often each n-gram occurs across a set of words, either by type
 (each word counted once) or by token (weighted by corpus frequency). Results
 are stratified by word length and returned as a single data frame. This is
-the core computation underlying \code{\link{build_freq_tables}}.
+the core computation underlying \code{\link{build_ngram_tables}}.
 }
 \examples{
 \dontrun{
@@ -66,5 +66,5 @@ tally_ngram_frequencies(
 
 }
 \seealso{
-\code{\link{build_freq_tables}}, \code{\link{build_ngram_cache}}
+\code{\link{build_ngram_tables}}, \code{\link{build_ngram_cache}}
 }

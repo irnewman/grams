@@ -70,5 +70,5 @@ cache <- build_ngram_cache(freq_table, n = 2L, method = "type")
 
 }
 \seealso{
-\code{\link{tally_ngram_frequencies}}, \code{\link{build_freq_tables}}
+\code{\link{tally_ngram_frequencies}}, \code{\link{build_ngram_tables}}
 }

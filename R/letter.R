@@ -1,7 +1,29 @@
 
 # package-level constant, defined once
 .VOWELS <- c("A", "E", "I", "O", "U", "Y")
-.UNCOMMON <- c("J", "K", "Q", "V", "W", "X", "Z") # Novick & Sherman, 2004
+.CONSONANTS <- c("B", "C", "D", "F", "G", "H", "J",
+                  "K", "L", "M", "N", "P", "Q", "R",
+                  "S", "T", "V", "W", "X", "Z")
+.INFREQUENT <- c("J", "K", "Q", "V", "W", "X", "Z") # Novick & Sherman, 2004
+
+#' Check a word for non-letter characters and warn if found
+#'
+#' @param word A word or anagram in string format.
+#'
+#' @return Invisibly returns the uppercase letters only (non-letters stripped),
+#'   as a character vector of individual characters.
+#'
+#' @keywords internal
+check_letters <- function(word) {
+  chars <- strsplit(toupper(word), "")[[1]]
+  is_letter <- chars %in% LETTERS
+  if (!all(is_letter)) {
+    warning("Non-letter character(s) found in '", word, "': ",
+            paste(unique(chars[!is_letter]), collapse = ", "),
+            ". These will be excluded from letter-based counts.")
+  }
+  invisible(chars[is_letter])
+}
 
 #' Count the number of vowels in a word.
 #'
@@ -11,7 +33,7 @@
 #' @export
 n_vowels <- function(word)
 {
-  sum(strsplit(toupper(word), "")[[1]] %in% .VOWELS)
+  sum(check_letters(word) %in% .VOWELS)
 }
 
 #' Count the number of consonants in a word.
@@ -22,7 +44,7 @@ n_vowels <- function(word)
 #' @export
 n_consonants <- function(word)
 {
-  nchar(word) - n_vowels(word)
+  sum(check_letters(word) %in% .CONSONANTS)
 }
 
 #' Compute the ratio of vowels to total letters in a word.
@@ -33,7 +55,7 @@ n_consonants <- function(word)
 #' @export
 vowel_ratio <- function(word)
 {
-  n_vowels(word) / nchar(word)
+  n_vowels(word) / (n_vowels(word) + n_consonants(word))
 }
 
 #' Identify whether the first letter of a word is a vowel or consonant.
@@ -44,7 +66,8 @@ vowel_ratio <- function(word)
 #' @export
 first_letter <- function(word)
 {
-  ifelse(strsplit(toupper(word), "")[[1]][1] %in% .VOWELS, "vowel", "consonant")
+  letters_only <- check_letters(word)
+  ifelse(letters_only[1] %in% .VOWELS, "vowel", "consonant")
 }
 
 #' Identify whether the word contains an infrequent letter: "J", "K", "Q", "V",
@@ -56,7 +79,7 @@ first_letter <- function(word)
 #' @export
 infreq_letter <- function(word)
 {
-  any(strsplit(toupper(word), "")[[1]] %in% .UNCOMMON)
+  any(check_letters(word) %in% .INFREQUENT)
 }
 
 #' Count the number of unique letters in a word.
@@ -67,7 +90,7 @@ infreq_letter <- function(word)
 #' @export
 n_unique_letters <- function(word)
 {
-  length(unique(strsplit(toupper(word), "")[[1]]))
+  length(unique(check_letters(word)))
 }
 
 #' Compute the ratio of unique letters to total letters in a word.
@@ -78,7 +101,8 @@ n_unique_letters <- function(word)
 #' @export
 unique_letter_ratio <- function(word)
 {
-  n_unique_letters(word) / nchar(word)
+  letters_only <- check_letters(word)
+  length(unique(letters_only)) / length(letters_only)
 }
 
 #' Finds letters that are the same in solution and anagram at the same position.

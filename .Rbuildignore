@@ -1,6 +1,6 @@
 ^.*\.Rproj$
 ^\.Rproj\.user$
-^anagram_data$
+^anagram_data
 ^cache$
 ^data-raw$
 ^dev$

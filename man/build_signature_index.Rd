@@ -4,7 +4,7 @@
 \alias{build_signature_index}
 \title{Build a signature index from a dictionary}
 \usage{
-build_signature_index(dictionary = internal_dict)
+build_signature_index(dictionary = grams::internal_dict)
 }
 \arguments{
 \item{dictionary}{A character vector of words. See \code{grams::internal_dict}

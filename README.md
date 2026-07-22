@@ -5,9 +5,9 @@
 [![R-CMD-check](https://github.com/irnewman/grams/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/irnewman/grams/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
-> **[A Generative Reposity of Anagrams and Metrics, built from SUBTLEX]**
+> **[A Generative Repository of Anagram Metrics and Stimuli]**
 
-{grams} is an R package for computing psycholinguistic metrics and
+{grams} is an R package for computing psycholinguistic string metrics and
 generating anagram stimuli. Developed with metareasoning experiments in
 mind, the package provides tools applicable across psycholinguistic domains. 
 It provides a pipeline for generating anagram candidates, computing 
