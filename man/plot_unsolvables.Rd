@@ -4,12 +4,13 @@
 \alias{plot_unsolvables}
 \title{Plot unsolvable anagram matching}
 \usage{
-plot_unsolvables(unsolvables, vars = c("SBF"), show_labels = FALSE)
+plot_unsolvables(unsolvables, vars = c("MLBF"), show_labels = FALSE)
 }
 \arguments{
-\item{unsolvables}{Data frame with Anagram and Unsolvable columns plus metrics}
+\item{unsolvables}{Data frame with a* (solvable) and u* (unsolvable) metric
+columns, one row per solvable/unsolvable pair}
 
-\item{vars}{Character vector of variables to plot}
+\item{vars}{Character vector of variables to plot (without prefix)}
 
 \item{show_labels}{Logical, whether to show extreme value labels}
 }

@@ -5,7 +5,7 @@
 \title{Select matched solution words for anagram experiments}
 \usage{
 select_solutions(
-  data = GRAMS,
+  data = NULL,
   filter = NULL,
   split_by = NULL,
   control_for = NULL,

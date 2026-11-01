@@ -13,7 +13,6 @@ Encoding: UTF-8
 LazyData: true
 LazyDataCompression: xz
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.0.0
 VignetteBuilder: knitr
 Depends:
     R (>= 4.1.0)
@@ -41,5 +40,4 @@ Remotes:
   JackEdTaylor/LexOPS
 URL: https://github.com/irnewman/grams
 BugReports: https://github.com/irnewman/grams/issues
-
-
+Config/roxygen2/version: 8.1.0
