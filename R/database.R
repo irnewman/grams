@@ -242,13 +242,22 @@ compute_string_indices <- function(strings,
 #' @param solution The source word the permutations are derived from.
 #' @param sig_index Signature index for dictionary lookup.
 #'   Defaults to grams::sig_index.
+#' @param drop_letter_invariant Logical. If \code{TRUE}, drops columns that
+#'   are invariant between an anagram and its solution (since they depend
+#'   only on the shared letter set: \code{GTzero}, \code{Nvowels},
+#'   \code{Nconsonants}, \code{Vratio}, \code{InfreqLetter},
+#'   \code{NuniqueLetters}, \code{ULratio}). Useful when merging with
+#'   \code{compute_string_indices()} output for the solution to avoid
+#'   redundant duplicate columns. Default \code{FALSE} (keeps all columns,
+#'   appropriate when using this function standalone).
 #'
 #' @return A data frame with one row per permutation and columns for each
 #'   measure.
 #' @export
 compute_anagram_indices <- function(anagram,
                                     solution,
-                                    sig_index = grams::sig_index)
+                                    sig_index = grams::sig_index,
+                                    drop_letter_invariant = FALSE)
 {
   # handle both single strings and vectors
   if (length(anagram) == 1 && length(solution) > 1) {
@@ -278,6 +287,7 @@ compute_anagram_indices <- function(anagram,
     "Articulability" = "aArticulability",
     "Nsyllables" = "aNsyllables",
     "SyllableSource" = "aSyllableSource",
+    "Nphonemes" = "aNphonemes",
     "FirstLetter" = "aFirstLetter",
     "Morphemes" = "aMorphemes",
     "Nmorphemes" = "aNmorphemes",
@@ -286,6 +296,14 @@ compute_anagram_indices <- function(anagram,
 
   for (old_name in names(rename_map)) {
     names(df)[names(df) == old_name] <- rename_map[[old_name]]
+  }
+
+  # drop columns that are invariant between anagram and solution (letter-set
+  # dependent only), if requested
+  # e.g. when merging with solution-side compute_string_indices() output
+  if (drop_letter_invariant) {
+    df[, c("GTzero", "Nvowels", "Nconsonants", "Vratio",
+           "InfreqLetter", "NuniqueLetters", "ULratio")] <- NULL
   }
 
   # precompute expensive operations

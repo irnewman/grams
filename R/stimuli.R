@@ -80,7 +80,7 @@
 #' \code{\link{plot_solutions}} for plotting solution distributions
 #'
 #' @export
-select_solutions <- function(data = GRAMS,
+select_solutions <- function(data = NULL,
                              filter = NULL,
                              split_by = NULL,
                              control_for = NULL,
@@ -89,6 +89,7 @@ select_solutions <- function(data = GRAMS,
                              seed = NULL)
 {
 
+  if (is.null(data)) data <- grams::GRAMS
   if (!is.null(seed)) set.seed(seed)
 
   # apply filters first
@@ -126,8 +127,8 @@ select_solutions <- function(data = GRAMS,
     }
   }
 
-  message("control_for received: ", paste(names(control_for), collapse = ", "))
-  message("Length of control_for: ", length(control_for))
+  #message("control_for received: ", paste(names(control_for), collapse = ", "))
+  #message("Length of control_for: ", length(control_for))
 
   # default control check
   if (is.null(control_for) || length(control_for) == 0) {
@@ -715,11 +716,13 @@ select_anagrams <- function(solutions,
             dplyr::filter(Word == tolower(sol))
 
           # apply bin constraint
-          query <- query |>
-            dplyr::filter(
-              .data[[var]] >= bin_range[1],
-              .data[[var]] <= bin_range[2]
-            )
+          if (var != ".none") {
+            query <- query |>
+              dplyr::filter(
+                .data[[var]] >= bin_range[1],
+                .data[[var]] <= bin_range[2]
+              )
+          }
 
           # apply filters
           if (!is.null(config$filter_ranges)) {
@@ -740,9 +743,11 @@ select_anagrams <- function(solutions,
         if (!is.null(config$anagram_control_tolerances) &&
             length(bin_anagrams) == 2) {
 
+          # configure_anagram_constraints() only builds low/high bins, so the
+          # pair matching assumes exactly those two; generalize both together
+          # if other split levels are added
           low_anagrams <- bin_anagrams[["low"]]
           high_anagrams <- bin_anagrams[["high"]]
-          # update: options other than low/high
 
           if (nrow(low_anagrams) > 0 && nrow(high_anagrams) > 0) {
 
@@ -1096,6 +1101,11 @@ configure_anagram_constraints <- function(solutions,
         }
       }
 
+      # no anagram split: one bin with no constraint
+      if (is.null(config$anagram_bins) || length(config$anagram_bins) == 0) {
+        config$anagram_bins <- list(.none = list(all = c(-Inf, Inf)))
+      }
+
       config
     })
 
@@ -1144,11 +1154,13 @@ configure_anagram_constraints <- function(solutions,
                   dplyr::filter(Word == tolower(sol))
 
                 # apply bin constraint
-                query <- query |>
-                  dplyr::filter(
-                    .data[[var]] >= bin_range[1],
-                    .data[[var]] <= bin_range[2]
-                  )
+                if (var != ".none") {
+                  query <- query |>
+                    dplyr::filter(
+                      .data[[var]] >= bin_range[1],
+                      .data[[var]] <= bin_range[2]
+                    )
+                }
 
                 # apply filters
                 if (!is.null(config$filter_ranges)) {
@@ -1662,6 +1674,23 @@ filter_anagrams <- function(anagrams)
         return()
       }
 
+      # variables to show next to each option: split vars, matched vars, Moves
+      show_vars <- unique(c(names(params$config$split_by),
+                            names(params$config$control_for),
+                            "Moves"))
+      show_vars <- intersect(show_vars, names(available))
+
+      # one "var: value" piece per variable, pasted together per row
+      if (length(show_vars) > 0) {
+        pieces <- lapply(show_vars, function(v) {
+          paste0(v, ": ", round(available[[v]], 3))
+        })
+        details <- do.call(paste, c(pieces, sep = ", "))
+        labels <- paste0(available$Anagram, " (", details, ")")
+      } else {
+        labels <- available$Anagram
+      }
+
       showModal(modalDialog(
         title = paste("Select anagram for", sol, "-", cond),
         size = "m",
@@ -1669,10 +1698,7 @@ filter_anagrams <- function(anagrams)
         radioButtons(
           "modal_anagram_choice",
           "Choose anagram:",
-          choices = setNames(available$Anagram,
-                             paste0(available$Anagram,
-                                    " (aSBF: ", round(available$aSBF, 3),
-                                    ", Moves: ", available$Moves, ")")),
+          choices = setNames(available$Anagram, labels),
           selected = rv$selected_anagrams[[paste(sol, cond, sep = "_")]]
         ),
 
@@ -2457,10 +2483,11 @@ generate_unsolvable_anagrams <- function(anagrams,
   }
 
   # get unique anagrams (one per item)
-  unique_anagrams <- anagrams %>%
-    dplyr::group_by(item_nr) %>%
-    dplyr::slice(1) %>%
-    dplyr::ungroup()
+  # one row per solvable anagram (each gets its own unsolvables)
+  unique_anagrams <- anagrams |>
+    dplyr::select(dplyr::any_of(c("item_nr", "Solution", "condition",
+                                  "anagram_condition", "Anagram"))) |>
+    dplyr::distinct()
 
   message(paste("Generating", n_candidates, "unsolvable candidates for",
                 nrow(unique_anagrams), "anagrams..."))
@@ -2468,12 +2495,11 @@ generate_unsolvable_anagrams <- function(anagrams,
   # generate unsolvables for each anagram
   all_unsolvables <- list()
 
-  for (i in 1:nrow(unique_anagrams)) {
-    target_anagram <- unique_anagrams$Anagram[i]
-    item_nr <- unique_anagrams$item_nr[i]
+  for (i in seq_len(nrow(unique_anagrams))) {
+    row <- unique_anagrams[i, ]
 
     unsolvables <- find_matched_unsolvable(
-      target_anagram = target_anagram,
+      target_anagram = row$Anagram,
       match_metrics = match_metrics,
       tolerance = tolerance,
       n_swaps = n_swaps,
@@ -2486,23 +2512,17 @@ generate_unsolvable_anagrams <- function(anagrams,
     )
 
     if (!is.null(unsolvables)) {
-      unsolvables$item_nr <- item_nr
-      unsolvables$Anagram <- target_anagram
       unsolvables$original <- NULL
-
-      # add solution info from original anagrams
-      solution_info <- unique_anagrams %>%
-        dplyr::filter(item_nr == !!item_nr) %>%
-        dplyr::select(Solution, condition) %>%
-        dplyr::slice(1)
-
-      unsolvables$Solution <- solution_info$Solution
-      unsolvables$condition <- solution_info$condition
+      unsolvables$item_nr <- row$item_nr
+      unsolvables$Solution <- row$Solution
+      unsolvables$condition <- row$condition
+      unsolvables$anagram_condition <- row$anagram_condition
+      unsolvables$Anagram <- row$Anagram
 
       all_unsolvables[[i]] <- unsolvables
     } else {
-      warning(paste("Failed to generate unsolvables for item", item_nr,
-                    "anagram:", target_anagram))
+      warning(paste("Failed to generate unsolvables for item", row$item_nr,
+                    "anagram:", row$Anagram))
     }
 
     if (i %% 10 == 0) {
@@ -2519,21 +2539,21 @@ generate_unsolvable_anagrams <- function(anagrams,
 
   # get anagram metrics from input (already computed in Stage 2)
   message("Extracting anagram metrics from input data...")
-  anagram_metrics_lookup <- anagrams %>%
-    select(item_nr, Anagram, starts_with("a")) %>%
-    distinct()
+  anagram_metrics_lookup <- anagrams |>
+    dplyr::select(item_nr, Solution, Anagram, dplyr::matches("^a[A-Z]")) |>
+    dplyr::distinct()
 
   # join anagram metrics and rename columns
   for (metric in match_metrics) {
     anagram_col <- paste0("a", metric)
 
     if (anagram_col %in% names(anagram_metrics_lookup)) {
-      temp <- anagram_metrics_lookup %>%
-        select(item_nr, Anagram, !!anagram_col) %>%
-        rename(!!paste0("Anagram_", metric) := !!anagram_col)
+      temp <- anagram_metrics_lookup |>
+        dplyr::select(item_nr, Solution, Anagram, dplyr::all_of(anagram_col)) |>
+        dplyr::rename(!!paste0("Anagram_", metric) := !!anagram_col)
 
-      result <- result %>%
-        left_join(temp, by = c("item_nr", "Anagram"))
+      result <- result |>
+        dplyr::left_join(temp, by = c("item_nr", "Solution", "Anagram"))
     }
   }
 
@@ -2570,15 +2590,16 @@ generate_unsolvable_anagrams <- function(anagrams,
   # sort candidates by matching quality (best first)
   metric_diff_cols <- grep("_diff$", names(result), value = TRUE)
 
-  result <- result %>%
-    mutate(
-      match_score = rowSums(across(all_of(metric_diff_cols), ~abs(.x)), na.rm = TRUE)
-    ) %>%
-    arrange(item_nr, match_score) %>%
-    select(-match_score)
+  result <- result |>
+    dplyr::mutate(
+      match_score = rowSums(dplyr::across(dplyr::all_of(metric_diff_cols), ~abs(.x)), na.rm = TRUE)
+    ) |>
+    dplyr::arrange(item_nr, Solution, anagram_condition, match_score) |>   # changed
+    dplyr::select(-match_score)
 
   # reorder columns for consistency
-  col_order <- c("item_nr", "Solution", "condition", "Anagram", "candidate",
+  col_order <- c("item_nr", "Solution", "condition", "anagram_condition",   # changed
+                 "Anagram", "candidate",
                  "n_swaps", "n_changed", "positions_changed", "changes")
   other_cols <- setdiff(names(result), col_order)
   result <- result[, c(col_order[col_order %in% names(result)], other_cols)]
@@ -2610,42 +2631,40 @@ filter_unsolvable_anagrams <- function(unsolvables)
 
   # get parameters
   params <- attr(unsolvables, "generation_params")
+  anagram_source <- attr(unsolvables, "anagram_source")                 # NEW
+
+  # one key per solvable anagram                                         # NEW
+  unsolvables <- unsolvables |>                                          # NEW
+    dplyr::mutate(anagram_id = paste(item_nr, Solution,                  # NEW
+                                     anagram_condition, sep = "_"))      # NEW
+  attr(unsolvables, "anagram_source") <- anagram_source                  # NEW
 
   # get matched metrics from generation params
   matched_metrics <- params$match_metrics
   if (is.null(matched_metrics)) {
-    matched_metrics <- "SBF"  # default fallback
+    matched_metrics <- "MLBF"  # default fallback
   }
 
-  # get the diff columns (e.g., SBF_diff, Articulability_diff)
+  # get the diff columns (e.g., MLBF_diff)
   diff_cols <- paste0(matched_metrics, "_diff")
   diff_cols <- diff_cols[diff_cols %in% names(unsolvables)]
 
-  # compute initial balance metrics
+  # compute balance metrics for the selected candidate of each anagram
   compute_balance_metrics <- function(summary_df, unsolvables_df) {
     result <- summary_df
 
-    # add the metrics from unsolvables
-    for (i in 1:nrow(result)) {
-      item <- result$item_nr[i]
-      selected <- result$selected_unsolvable[i]
-      anagram <- result$Anagram[i]
-
-      # find the matching unsolvable
-      match <- unsolvables_df %>%
-        filter(item_nr == item,
-               Anagram == anagram,
-               candidate == selected) %>%
-        slice(1)
+    for (i in seq_len(nrow(result))) {
+      match <- unsolvables_df |>
+        dplyr::filter(anagram_id == result$anagram_id[i],                # CHANGED
+                      candidate == result$selected_unsolvable[i]) |>     # CHANGED
+        dplyr::slice(1)
 
       if (nrow(match) > 0) {
-        # add all diff columns dynamically
         for (dcol in diff_cols) {
           result[[dcol]][i] <- abs(match[[dcol]])
         }
         result$n_changed[i] <- match$n_changed
       } else {
-        # set to NA if not found
         for (dcol in diff_cols) {
           result[[dcol]][i] <- NA_real_
         }
@@ -2656,19 +2675,21 @@ filter_unsolvable_anagrams <- function(unsolvables)
     result
   }
 
-  # create summary table: one row per item
-  summary_table <- unsolvables %>%
-    group_by(item_nr) %>%
-    summarise(
-      Solution = first(Solution),
-      Anagram = first(Anagram),
-      n_candidates = n(),
-      selected_unsolvable = first(candidate),
+  # summary table: one row per solvable anagram                          # CHANGED
+  summary_table <- unsolvables |>
+    dplyr::group_by(anagram_id) |>                                      # CHANGED
+    dplyr::summarise(
+      item_nr = dplyr::first(item_nr),                                   # NEW
+      Solution = dplyr::first(Solution),
+      anagram_condition = dplyr::first(anagram_condition),               # NEW
+      Anagram = dplyr::first(Anagram),
+      n_candidates = dplyr::n(),
+      selected_unsolvable = dplyr::first(candidate),
       n_changed = NA_integer_,
       .groups = "drop"
-    )
+    ) |>
+    dplyr::arrange(item_nr, Solution, anagram_condition)                 # NEW
 
-  # initialize diff columns
   for (dcol in diff_cols) {
     summary_table[[dcol]] <- NA_real_
   }
@@ -2679,35 +2700,33 @@ filter_unsolvable_anagrams <- function(unsolvables)
   rv <- reactiveValues(
     data = unsolvables,
     summary_table = summary_table,
-    selected_items = summary_table$item_nr,
+    selected_ids = summary_table$anagram_id,                             # CHANGED
     proxy_ready = FALSE,
-    modal_item = NULL
+    modal_id = NULL                                                      # CHANGED
   )
 
   # modal for selecting unsolvable
-  show_unsolvable_modal <- function(item_number) {
-    candidates <- rv$data %>%
-      filter(item_nr == item_number)
+  show_unsolvable_modal <- function(id) {                                # CHANGED
+    candidates <- rv$data |>
+      dplyr::filter(anagram_id == id)                                    # CHANGED
 
-    current_selection <- rv$summary_table %>%
-      filter(item_nr == item_number) %>%
-      pull(selected_unsolvable)
+    current_selection <- rv$summary_table |>
+      dplyr::filter(anagram_id == id) |>                                 # CHANGED
+      dplyr::pull(selected_unsolvable)
 
-    rv$modal_item <- item_number
+    rv$modal_id <- id                                                    # CHANGED
 
-    # build modal table with dynamic diff columns
-    modal_table <- candidates %>%
-      select(candidate, n_changed, changes, all_of(diff_cols))
+    modal_table <- candidates |>
+      dplyr::select(candidate, n_changed, changes, dplyr::all_of(diff_cols))
 
-    # round diff columns
     for (dcol in diff_cols) {
-      if (dcol %in% names(modal_table)) {
-        modal_table[[dcol]] <- round(modal_table[[dcol]], 4)
-      }
+      modal_table[[dcol]] <- round(modal_table[[dcol]], 4)
     }
 
     showModal(modalDialog(
-      title = paste("Select Unsolvable for Item", item_number),
+      title = paste0("Select unsolvable for ", candidates$Anagram[1],    # CHANGED
+                     " (", candidates$Solution[1], ", ",                 # CHANGED
+                     candidates$anagram_condition[1], ")"),              # CHANGED
       size = "l",
       renderTable(modal_table),
       radioButtons(
@@ -2753,46 +2772,35 @@ filter_unsolvable_anagrams <- function(unsolvables)
     # render table with clickable unsolvables
     output$filter_table <- renderDT({
 
-      display_table <- rv$summary_table %>%
-        mutate(
-          Unsolvable = sapply(1:n(), function(i) {
-            paste0('<a href="#" onclick="Shiny.setInputValue(\'unsolvable_click\', ',
-                   item_nr[i], ', {priority: \'event\'}); return false;">',
-                   selected_unsolvable[i], '</a>')
-          })
+      display_table <- rv$summary_table |>
+        dplyr::mutate(
+          Unsolvable = paste0(                                           # CHANGED
+            '<a href="#" onclick="Shiny.setInputValue(\'unsolvable_click\', \'',
+            anagram_id, '\', {priority: \'event\'}); return false;">',
+            selected_unsolvable, '</a>'
+          )
         )
 
-      # round diff columns
       for (dcol in diff_cols) {
-        if (dcol %in% names(display_table)) {
-          display_table[[dcol]] <- round(display_table[[dcol]], 4)
-        }
+        display_table[[dcol]] <- round(display_table[[dcol]], 4)
       }
 
-      # select columns to display
-      display_cols <- c("item_nr", "Solution", "Anagram", "Unsolvable",
+      display_cols <- c("item_nr", "Solution", "anagram_condition",      # CHANGED
+                        "Anagram", "Unsolvable",
                         "n_candidates", "n_changed", diff_cols)
       display_cols <- display_cols[display_cols %in% names(display_table)]
 
-      display_table <- display_table %>% select(all_of(display_cols))
+      display_table <- display_table |> dplyr::select(dplyr::all_of(display_cols))
 
       datatable(
         display_table,
         rownames = FALSE,
         escape = FALSE,
-        selection = list(mode = 'multiple', selected = 1:nrow(display_table)),
+        selection = list(mode = 'multiple', selected = seq_len(nrow(display_table))),
         options = list(
           pageLength = -1,
           scrollY = "600px",
-          dom = 'ft',
-          columnDefs = list(
-            list(targets = 0, width = '60px'),
-            list(targets = 1, width = '15%'),
-            list(targets = 2, width = '15%'),
-            list(targets = 3, width = '15%'),
-            list(targets = 4, width = '80px'),
-            list(targets = 5, width = '80px')
-          )
+          dom = 'ft'                                                     # CHANGED: columnDefs removed
         )
       )
     })
@@ -2809,12 +2817,7 @@ filter_unsolvable_anagrams <- function(unsolvables)
       if (!rv$proxy_ready) return()
 
       selected_rows <- input$filter_table_rows_selected
-
-      if (length(selected_rows) > 0) {
-        rv$selected_items <- rv$summary_table$item_nr[selected_rows]
-      } else {
-        rv$selected_items <- integer(0)
-      }
+      rv$selected_ids <- rv$summary_table$anagram_id[selected_rows]      # CHANGED
     }, ignoreNULL = FALSE)
 
     # handle unsolvable clicks - show modal
@@ -2824,66 +2827,55 @@ filter_unsolvable_anagrams <- function(unsolvables)
 
     # handle modal confirmation
     observeEvent(input$modal_confirm, {
-      if (!is.null(rv$modal_item) && !is.null(input$modal_candidate_choice)) {
+      if (!is.null(rv$modal_id) && !is.null(input$modal_candidate_choice)) {
         new_candidate <- input$modal_candidate_choice
 
-        # update summary table
-        rv$summary_table <- rv$summary_table %>%
-          mutate(
-            selected_unsolvable = ifelse(item_nr == rv$modal_item,
+        rv$summary_table <- rv$summary_table |>
+          dplyr::mutate(
+            selected_unsolvable = ifelse(anagram_id == rv$modal_id,      # CHANGED
                                          new_candidate,
                                          selected_unsolvable)
           )
 
-        # recompute balance metrics
         rv$summary_table <- compute_balance_metrics(rv$summary_table, rv$data)
 
-        rv$modal_item <- NULL
+        rv$modal_id <- NULL                                              # CHANGED
         removeModal()
       }
     })
 
     # select/deselect buttons
     observeEvent(input$select_all, {
-      proxy <- dataTableProxy("filter_table")
-      selectRows(proxy, 1:nrow(rv$summary_table))
+      selectRows(dataTableProxy("filter_table"), seq_len(nrow(rv$summary_table)))
     })
 
     observeEvent(input$deselect_all, {
-      proxy <- dataTableProxy("filter_table")
-      selectRows(proxy, NULL)
+      selectRows(dataTableProxy("filter_table"), NULL)
     })
 
     observeEvent(input$invert_selection, {
       current <- input$filter_table_rows_selected
-      all_rows <- 1:nrow(rv$summary_table)
-      new_selection <- setdiff(all_rows, current)
-
-      proxy <- dataTableProxy("filter_table")
-      selectRows(proxy, new_selection)
+      new_selection <- setdiff(seq_len(nrow(rv$summary_table)), current)
+      selectRows(dataTableProxy("filter_table"), new_selection)
     })
 
     # summary text
     output$summary_text <- renderText({
-      n_selected <- length(rv$selected_items)
-      n_total <- nrow(rv$summary_table)
-      paste0("Selected: ", n_selected, " / ", n_total, " items")
+      paste0("Selected: ", length(rv$selected_ids), " / ",               # CHANGED
+             nrow(rv$summary_table), " anagrams")                        # CHANGED
     })
 
     # accept
     observeEvent(input$done, {
-      # get selected items with their chosen unsolvable
-      final <- rv$summary_table %>%
-        filter(item_nr %in% rv$selected_items) %>%
-        select(item_nr, Solution, Anagram, selected_unsolvable) %>%
-        rename(Unsolvable = selected_unsolvable)
+      final <- rv$summary_table |>
+        dplyr::filter(anagram_id %in% rv$selected_ids) |>                # CHANGED
+        dplyr::select(anagram_id, selected_unsolvable) |>                # CHANGED
+        dplyr::rename(Unsolvable = selected_unsolvable)
 
-      # join back to full unsolvable data for the selected candidates
-      final_full <- final %>%
-        left_join(
-          rv$data %>% select(-Solution, -Anagram),  # Remove these to avoid duplicates
-          by = c("item_nr", "Unsolvable" = "candidate")
-        )
+      # join back to the full candidate row for each chosen unsolvable  # CHANGED
+      final_full <- final |>
+        dplyr::left_join(rv$data,
+                         by = c("anagram_id", "Unsolvable" = "candidate"))
 
       if (nrow(final_full) == 0) {
         showNotification("No items selected", type = "warning")
@@ -2902,36 +2894,38 @@ filter_unsolvable_anagrams <- function(unsolvables)
 
 #' Plot unsolvable anagram matching
 #'
-#' @param unsolvables Data frame with Anagram and Unsolvable columns plus metrics
-#' @param vars Character vector of variables to plot
+#' @param unsolvables Data frame with a* (solvable) and u* (unsolvable) metric
+#'   columns, one row per solvable/unsolvable pair
+#' @param vars Character vector of variables to plot (without prefix)
 #' @param show_labels Logical, whether to show extreme value labels
 #' @export
-plot_unsolvables <- function(unsolvables, vars = c("SBF"), show_labels = FALSE)
+plot_unsolvables <- function(unsolvables, vars = c("MLBF"), show_labels = FALSE)
 {
 
-  # build long format data from a* and u* columns
-  plot_data <- unsolvables %>%
-    select(item_nr, starts_with("a"), starts_with("u")) %>%
-    distinct()
+  # one line per solvable/unsolvable pair                                # NEW
+  if (!"anagram_id" %in% names(unsolvables)) {                           # NEW
+    unsolvables$anagram_id <- as.character(unsolvables$item_nr)          # NEW
+  }                                                                      # NEW
 
-  # extract the variable names (without prefix)
-  a_cols <- grep("^a[A-Z]", names(plot_data), value = TRUE)
-  u_cols <- grep("^u[A-Z]", names(plot_data), value = TRUE)
+  plot_data <- unsolvables |>
+    dplyr::select(item_nr, anagram_id, dplyr::matches("^[au][A-Z]",      # CHANGED
+                                                      ignore.case = FALSE)) |>
+    dplyr::distinct()
 
-  # for each variable in vars, create long format
+  # long format, one block per variable
   plot_list <- lapply(vars, function(v) {
     a_col <- paste0("a", v)
     u_col <- paste0("u", v)
 
     if (a_col %in% names(plot_data) && u_col %in% names(plot_data)) {
-      plot_data %>%
-        select(item_nr, all_of(c(a_col, u_col))) %>%
-        pivot_longer(
-          cols = c(a_col, u_col),
+      plot_data |>
+        dplyr::select(item_nr, anagram_id, dplyr::all_of(c(a_col, u_col))) |>   # CHANGED
+        tidyr::pivot_longer(
+          cols = dplyr::all_of(c(a_col, u_col)),                         # CHANGED
           names_to = "type",
           values_to = "value"
-        ) %>%
-        mutate(
+        ) |>
+        dplyr::mutate(
           type = ifelse(startsWith(type, "a"), "Solvable", "Unsolvable"),
           type = factor(type, levels = c("Solvable", "Unsolvable")),
           variable = v
@@ -2941,85 +2935,77 @@ plot_unsolvables <- function(unsolvables, vars = c("SBF"), show_labels = FALSE)
     }
   })
 
-  plot_data <- bind_rows(compact(plot_list))
+  plot_data <- dplyr::bind_rows(purrr::compact(plot_list))
 
-  # get conditions for coloring, use default ggplot2 palette
-  conditions <- unique(plot_data$type)
-  n_conditions <- length(conditions)
+  if (nrow(plot_data) == 0) {                                            # NEW
+    stop("None of vars found as a*/u* column pairs: ",                   # NEW
+         paste(vars, collapse = ", "))                                   # NEW
+  }                                                                      # NEW
 
   # default ggplot2 palette
-  color_values <- scales::hue_pal()(n_conditions)
+  conditions <- levels(plot_data$type)
+  color_values <- scales::hue_pal()(length(conditions))
   names(color_values) <- conditions
 
-  # base plot
-  p <- ggplot(plot_data, aes(x = type, y = value, fill = type)) +
-    geom_violin(
+  p <- ggplot2::ggplot(plot_data, ggplot2::aes(x = type, y = value, fill = type)) +
+    ggplot2::geom_violin(
       alpha = 0.2,
       trim = TRUE,
       color = NA,
       scale = "width"
     ) +
-    geom_line(
-      aes(group = item_nr),
+    ggplot2::geom_line(
+      ggplot2::aes(group = anagram_id),                                  # CHANGED
       alpha = 0.4,
       linewidth = 0.6,
       color = "gray40"
     ) +
-    geom_point(
-      aes(color = type),
+    ggplot2::geom_point(
+      ggplot2::aes(color = type),
       size = 1.5,
       alpha = 0.7
     ) +
-    scale_color_manual(values = color_values) +
-    scale_fill_manual(values = color_values) +
-    facet_wrap(~variable, scales = "free_y", ncol = 3) +
-    theme_minimal() +
-    labs(
+    ggplot2::scale_color_manual(values = color_values) +
+    ggplot2::scale_fill_manual(values = color_values) +
+    ggplot2::facet_wrap(~variable, scales = "free_y", ncol = 3) +
+    ggplot2::theme_minimal() +
+    ggplot2::labs(
       x = "Type",
       y = "Value",
       title = "Unsolvable Anagrams: Matching Quality"
     ) +
-    theme(
+    ggplot2::theme(
       legend.position = "none",
-      strip.text = element_text(face = "bold", size = 11),
-      panel.grid.major.x = element_blank(),
-      axis.text.x = element_text(angle = 45, hjust = 1)
+      strip.text = ggplot2::element_text(face = "bold", size = 11),
+      panel.grid.major.x = ggplot2::element_blank(),
+      axis.text.x = ggplot2::element_text(angle = 45, hjust = 1)
     )
 
-  # add labels if requested
   if (show_labels) {
     # label top/bottom 2.5% extremes in each type
-    extremes <- plot_data %>%
-      group_by(variable, type) %>%
-      mutate(
-        is_high_extreme = value >= quantile(value, 0.975, na.rm = TRUE),
-        is_low_extreme = value <= quantile(value, 0.025, na.rm = TRUE)
-      ) %>%
-      filter(is_high_extreme | is_low_extreme) %>%
-      ungroup() %>%
-      distinct(item_nr, variable, type, value, .keep_all = TRUE)
+    extremes <- plot_data |>
+      dplyr::group_by(variable, type) |>
+      dplyr::mutate(
+        is_high_extreme = value >= stats::quantile(value, 0.975, na.rm = TRUE),
+        is_low_extreme = value <= stats::quantile(value, 0.025, na.rm = TRUE)
+      ) |>
+      dplyr::filter(is_high_extreme | is_low_extreme) |>
+      dplyr::ungroup() |>
+      dplyr::distinct(anagram_id, variable, type, value, .keep_all = TRUE)   # CHANGED
 
-    # get ordered types (matches x-axis order)
     types_ordered <- sort(unique(extremes$type))
     n_types <- length(types_ordered)
 
-    # add labels for each type with appropriate nudge direction
     for (i in seq_along(types_ordered)) {
-      typ <- types_ordered[i]
-      labels_type <- extremes %>% filter(type == typ)
+      labels_type <- extremes |> dplyr::filter(type == types_ordered[i])
 
       if (nrow(labels_type) > 0) {
-        # calculate nudge: left (-), right (+)
-        if (n_types == 1) {
-          nudge_val <- 0
-        } else {
-          nudge_val <- ((i - 1) / (n_types - 1) - 0.5) * 0.3
-        }
+        nudge_val <- if (n_types == 1) 0 else ((i - 1) / (n_types - 1) - 0.5) * 0.3
 
         p <- p +
-          geom_text_repel(
+          ggrepel::geom_text_repel(
             data = labels_type,
-            aes(label = paste0("#", item_nr)),
+            ggplot2::aes(label = paste0("#", item_nr)),
             size = 3,
             alpha = 0.7,
             max.overlaps = 30,
@@ -3042,46 +3028,48 @@ plot_unsolvables <- function(unsolvables, vars = c("SBF"), show_labels = FALSE)
 review_unsolvable_anagrams <- function(unsolvables)
 {
 
-  # get parameters
   params <- attr(unsolvables, "generation_params")
+  anagram_source <- attr(unsolvables, "anagram_source")
 
-  # get the metrics that were matched on
   matched_metrics <- params$match_metrics
   if (is.null(matched_metrics)) {
-    matched_metrics <- c("SBF")
+    matched_metrics <- "MLBF"
   }
 
-  # get unique items
-  unique_items <- sort(unique(unsolvables$item_nr))
+  # key per solvable anagram (already present from filter step)        # NEW
+  if (!"anagram_id" %in% names(unsolvables)) {                           # NEW
+    unsolvables$anagram_id <- paste(unsolvables$item_nr,                 # NEW
+                                    unsolvables$Solution,                # NEW
+                                    unsolvables$anagram_condition,       # NEW
+                                    sep = "_")                           # NEW
+  }                                                                      # NEW
 
-  # create summary table
-  summary_table <- unsolvables %>%
-    group_by(item_nr) %>%
-    summarise(
-      Solution = first(Solution),
-      Anagram = first(Anagram),
-      Unsolvable = first(Unsolvable),
+  # plotting copy: Anagram_X -> aX, Unsolvable_X -> uX                   # NEW
+  to_plot_names <- function(d) {                                         # NEW
+    d |>
+      dplyr::rename_with(~ sub("^Anagram_", "a", .x),
+                         dplyr::matches("^Anagram_", ignore.case = FALSE)) |>
+      dplyr::rename_with(~ sub("^Unsolvable_", "u", .x),
+                         dplyr::matches("^Unsolvable_", ignore.case = FALSE))
+  }
+
+  # summary table: one row per solvable anagram                          # CHANGED
+  summary_table <- unsolvables |>
+    dplyr::group_by(anagram_id) |>
+    dplyr::summarise(
+      item_nr = dplyr::first(item_nr),
+      Solution = dplyr::first(Solution),
+      anagram_condition = dplyr::first(anagram_condition),
+      Anagram = dplyr::first(Anagram),
+      Unsolvable = dplyr::first(Unsolvable),
       .groups = "drop"
-    )
+    ) |>
+    dplyr::arrange(item_nr, Solution, anagram_condition)
 
-  # build combined metrics from the pre-computed columns
-  combined_metrics <- unsolvables %>%
-    select(item_nr, starts_with("Anagram_"), starts_with("Unsolvable_")) %>%
-    distinct() %>%
-    pivot_longer(
-      cols = c(starts_with("Anagram_"), starts_with("Unsolvable_")),
-      names_to = c("type", "variable"),
-      names_pattern = "(.*)_(.*)",
-      values_to = "value"
-    ) %>%
-    mutate(type = ifelse(type == "Anagram", "Solvable", "Unsolvable"))
-
-  # track state
   rv <- reactiveValues(
     data = unsolvables,
     summary_table = summary_table,
-    combined_metrics = combined_metrics,
-    selected_items = unique_items,
+    selected_ids = summary_table$anagram_id,                             # CHANGED
     proxy_ready = FALSE
   )
 
@@ -3089,7 +3077,6 @@ review_unsolvable_anagrams <- function(unsolvables)
     gadgetTitleBar("Review Unsolvable Anagrams - Final Selection",
                    right = miniTitleBarButton("done", "Accept", primary = TRUE)),
     miniContentPanel(
-      # actions bar
       fillRow(
         height = 70,
         fillCol(
@@ -3110,7 +3097,6 @@ review_unsolvable_anagrams <- function(unsolvables)
                          width = "300px")
         )
       ),
-      # side by side: table (left, larger) and plot (right, smaller)
       fillRow(
         flex = c(1.2, 1),
         fillCol(
@@ -3125,182 +3111,150 @@ review_unsolvable_anagrams <- function(unsolvables)
 
   server <- function(input, output, session) {
 
-    # render table
     output$unsolvable_table <- renderDT({
       datatable(
-        rv$summary_table,
+        rv$summary_table |>
+          dplyr::select(item_nr, Solution, anagram_condition,           # CHANGED
+                        Anagram, Unsolvable),
         rownames = FALSE,
-        selection = list(mode = 'multiple', selected = 1:nrow(rv$summary_table)),
+        selection = list(mode = 'multiple',
+                         selected = seq_len(nrow(rv$summary_table))),
         options = list(
           pageLength = -1,
           scrollX = FALSE,
           scrollY = "700px",
-          dom = 'ft',
-          columnDefs = list(
-            list(targets = 0, width = '60px'),
-            list(targets = 1, width = '25%'),
-            list(targets = 2, width = '25%'),
-            list(targets = 3, width = '25%')
-          )
+          dom = 'ft'                                                     # CHANGED: columnDefs removed
         )
       )
     })
 
-    # create proxy after table renders
     observe({
       if (!rv$proxy_ready && !is.null(input$unsolvable_table_rows_selected)) {
         rv$proxy_ready <- TRUE
       }
     })
 
-    # track row selection
     observeEvent(input$unsolvable_table_rows_selected, {
       if (!rv$proxy_ready) return()
-
       selected_rows <- input$unsolvable_table_rows_selected
-
-      if (length(selected_rows) > 0) {
-        rv$selected_items <- rv$summary_table$item_nr[selected_rows]
-      } else {
-        rv$selected_items <- integer(0)
-      }
+      rv$selected_ids <- rv$summary_table$anagram_id[selected_rows]      # CHANGED
     }, ignoreNULL = FALSE)
 
-    # select/deselect all buttons
     observeEvent(input$select_all, {
-      proxy <- dataTableProxy("unsolvable_table")
-      selectRows(proxy, 1:nrow(rv$summary_table))
+      selectRows(dataTableProxy("unsolvable_table"), seq_len(nrow(rv$summary_table)))
     })
 
     observeEvent(input$deselect_all, {
-      proxy <- dataTableProxy("unsolvable_table")
-      selectRows(proxy, NULL)
+      selectRows(dataTableProxy("unsolvable_table"), NULL)
     })
 
     observeEvent(input$invert_selection, {
       current <- input$unsolvable_table_rows_selected
-      all_rows <- 1:nrow(rv$summary_table)
-      new_selection <- setdiff(all_rows, current)
-
-      proxy <- dataTableProxy("unsolvable_table")
-      selectRows(proxy, new_selection)
+      new_selection <- setdiff(seq_len(nrow(rv$summary_table)), current)
+      selectRows(dataTableProxy("unsolvable_table"), new_selection)
     })
 
-    # render plot
-    output$unsolvable_plot <- renderPlot({
-      plot_data <- rv$data %>%
-        filter(item_nr %in% rv$selected_items)
+    # shared by plot and export                                          # NEW
+    current_plot <- function() {                                         # NEW
+      plot_data <- rv$data |>
+        dplyr::filter(anagram_id %in% rv$selected_ids) |>
+        to_plot_names()
 
-      if (nrow(plot_data) == 0) {
+      plot_vars <- input$plot_vars
+      if (is.null(plot_vars) || length(plot_vars) == 0) {
+        plot_vars <- matched_metrics
+      }
+
+      plot_unsolvables(plot_data, vars = plot_vars,
+                       show_labels = input$show_labels)
+    }
+
+    output$unsolvable_plot <- renderPlot({
+      if (length(rv$selected_ids) == 0) {
         plot(1, type = "n", axes = FALSE, xlab = "", ylab = "")
         text(1, 1, "No items selected", cex = 1.5, col = "gray50")
       } else {
-        plot_vars <- input$plot_vars
-        if (is.null(plot_vars) || length(plot_vars) == 0) {
-          plot_vars <- matched_metrics
-        }
-
-        plot_unsolvables(plot_data, vars = plot_vars, show_labels = input$show_labels)
+        current_plot()                                                   # CHANGED
       }
     })
 
-    # summary
     output$summary_text <- renderText({
-      n_selected <- length(rv$selected_items)
-      n_total <- nrow(rv$summary_table)
-      paste0("Selected: ", n_selected, " / ", n_total, " items")
+      paste0("Selected: ", length(rv$selected_ids), " / ",               # CHANGED
+             nrow(rv$summary_table), " anagrams")
     })
 
-    # export plot
     observeEvent(input$export_plot, {
-      timestamp <- format(Sys.time(), "%Y%m%d_%H%M%S")
-      filepath <- paste0("unsolvable_plot_", timestamp, ".png")
-
-      plot_data <- rv$data %>%
-        filter(item_nr %in% rv$selected_items)
-
-      plot_vars_selected <- input$plot_vars
-      if (is.null(plot_vars_selected) || length(plot_vars_selected) == 0) {
-        plot_vars_selected <- matched_metrics
+      if (length(rv$selected_ids) == 0) {
+        showNotification("No items selected", type = "warning")
+        return()
       }
-
-      ggplot2::ggsave(
-        filepath,
-        plot_unsolvables(plot_data, vars = plot_vars_selected, show_labels = input$show_labels),
-        width = 14, height = 8, dpi = 300
-      )
-
+      filepath <- paste0("unsolvable_plot_",
+                         format(Sys.time(), "%Y%m%d_%H%M%S"), ".png")
+      ggplot2::ggsave(filepath, current_plot(),                          # CHANGED
+                      width = 14, height = 8, dpi = 300)
       showNotification(paste("Saved:", basename(filepath)), type = "message")
     })
 
     # accept
     observeEvent(input$done, {
-      final <- rv$data %>%
-        filter(item_nr %in% rv$selected_items)
+      final <- rv$data |>
+        dplyr::filter(anagram_id %in% rv$selected_ids)                   # CHANGED
 
       if (nrow(final) == 0) {
         showNotification("No items selected", type = "warning")
         return()
       }
 
-      # join back to the full anagram data to get all metrics
-      anagram_source <- attr(rv$data, "anagram_source")
-
+      # join back to the full Stage 2 anagram data
       if (!is.null(anagram_source)) {
-        # get one row per item (all the same anagram per item)
-        anagram_data <- anagram_source %>%
-          distinct(item_nr, Anagram, .keep_all = TRUE)
+        anagram_data <- anagram_source |>
+          dplyr::distinct(item_nr, Solution, Anagram, .keep_all = TRUE)  # CHANGED
 
-        # remove overlapping columns except join keys
-        overlap_cols <- intersect(names(final), names(anagram_data))
-        overlap_cols <- setdiff(overlap_cols, c("item_nr", "Anagram"))
-
+        join_keys <- c("item_nr", "Solution", "Anagram")                 # CHANGED
+        overlap_cols <- setdiff(intersect(names(final), names(anagram_data)),
+                                join_keys)
         if (length(overlap_cols) > 0) {
-          anagram_data <- anagram_data %>%
-            select(-all_of(overlap_cols))
+          anagram_data <- anagram_data |>
+            dplyr::select(-dplyr::all_of(overlap_cols))
         }
 
-        final <- final %>%
-          left_join(anagram_data, by = c("item_nr", "Anagram"))
+        final <- final |>
+          dplyr::left_join(anagram_data, by = join_keys)                 # CHANGED
       }
 
-      # remove Anagram_* columns (duplicates of a* columns)
-      anagram_dup_cols <- grep("^Anagram_", names(final), value = TRUE)
-      if (length(anagram_dup_cols) > 0) {
-        final <- final %>% select(-all_of(anagram_dup_cols))
-      }
+      # drop Anagram_* duplicates of the a* columns, rename Unsolvable_* to u*
+      final <- final |>
+        dplyr::select(-dplyr::matches("^Anagram_", ignore.case = FALSE),
+                      -anagram_id) |>                                    # CHANGED: drop internal key
+        dplyr::rename_with(~ sub("^Unsolvable_", "u", .x),
+                           dplyr::matches("^Unsolvable_", ignore.case = FALSE))
 
-      # rename Unsolvable_* columns to u*
-      unsolvable_metric_cols <- grep("^Unsolvable_", names(final), value = TRUE)
-      if (length(unsolvable_metric_cols) > 0) {
-        new_names <- gsub("^Unsolvable_", "u", unsolvable_metric_cols)
-        final <- final %>%
-          rename_with(~ gsub("^Unsolvable_", "u", .x), starts_with("Unsolvable_"))
-      }
-
-      # reorder columns: Solution, Anagram, Unsolvable, anagram metrics, unsolvable metrics, other info, everything else
+      # column order
       anagram_cols <- grep("^a[A-Z]", names(final), value = TRUE)
       anagram_base <- anagram_cols[!grepl("mean|range|min|max|rank", anagram_cols)]
-      anagram_agg <- anagram_cols[grepl("mean|range|min|max|rank", anagram_cols)]
-
+      anagram_agg  <- anagram_cols[grepl("mean|range|min|max|rank", anagram_cols)]
       unsolvable_metric_cols <- grep("^u[A-Z]", names(final), value = TRUE)
-
-      unsolvable_info_cols <- c("n_swaps", "n_changed", "positions_changed", "changes")
-      unsolvable_info_cols <- unsolvable_info_cols[unsolvable_info_cols %in% names(final)]
+      unsolvable_info_cols <- intersect(
+        c("n_swaps", "n_changed", "positions_changed", "changes"), names(final)
+      )
+      id_cols <- intersect(c("item_nr", "condition", "anagram_condition"),   # NEW
+                           names(final))
 
       other_cols <- setdiff(
         names(final),
-        c("Solution", "Anagram", "Unsolvable", anagram_cols, unsolvable_metric_cols, unsolvable_info_cols)
+        c("Solution", "Anagram", "Unsolvable", id_cols, anagram_cols,
+          unsolvable_metric_cols, unsolvable_info_cols)
       )
 
-      final <- final %>%
-        select(
+      final <- final |>
+        dplyr::select(
+          dplyr::all_of(id_cols),                                        # NEW
           Solution, Anagram, Unsolvable,
-          all_of(unsolvable_metric_cols),
-          all_of(unsolvable_info_cols),
-          all_of(anagram_base),
-          all_of(anagram_agg),
-          all_of(other_cols)
+          dplyr::all_of(unsolvable_metric_cols),
+          dplyr::all_of(unsolvable_info_cols),
+          dplyr::all_of(anagram_base),
+          dplyr::all_of(anagram_agg),
+          dplyr::all_of(other_cols)
         )
 
       attr(final, "generation_params") <- params

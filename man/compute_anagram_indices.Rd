@@ -4,7 +4,12 @@
 \alias{compute_anagram_indices}
 \title{Compute anagram indices relative to a solution word}
 \usage{
-compute_anagram_indices(anagram, solution, sig_index = grams::sig_index)
+compute_anagram_indices(
+  anagram,
+  solution,
+  sig_index = grams::sig_index,
+  drop_letter_invariant = FALSE
+)
 }
 \arguments{
 \item{anagram}{A character vector of anagram permutations to score.}
@@ -13,6 +18,15 @@ compute_anagram_indices(anagram, solution, sig_index = grams::sig_index)
 
 \item{sig_index}{Signature index for dictionary lookup.
 Defaults to grams::sig_index.}
+
+\item{drop_letter_invariant}{Logical. If \code{TRUE}, drops columns that
+are invariant between an anagram and its solution (since they depend
+only on the shared letter set: \code{GTzero}, \code{Nvowels},
+\code{Nconsonants}, \code{Vratio}, \code{InfreqLetter},
+\code{NuniqueLetters}, \code{ULratio}). Useful when merging with
+\code{compute_string_indices()} output for the solution to avoid
+redundant duplicate columns. Default \code{FALSE} (keeps all columns,
+appropriate when using this function standalone).}
 }
 \value{
 A data frame with one row per permutation and columns for each
