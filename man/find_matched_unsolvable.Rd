@@ -6,23 +6,23 @@
 \usage{
 find_matched_unsolvable(
   target_anagram,
-  match_metrics = c("SBF"),
-  tolerance = list(SBF = 0.05),
+  match_metrics = c("MLBF"),
+  tolerance = list(MLBF = 0.1),
   n_swaps = 1,
   swap_type = c("either", "vowels_only", "consonants_only", "both"),
   swap_strategy = c("phonetic", "random", "weighted"),
   max_position_overlap = NULL,
   n_candidates = 1,
   max_attempts = 100,
-  sig_index = grams::sig_index
+  sig_index = NULL
 )
 }
 \arguments{
 \item{target_anagram}{Character string of the anagram to match}
 
-\item{match_metrics}{Character vector of metrics to match (e.g., c("SBF", "Articulability"))}
+\item{match_metrics}{Character vector of metrics to match (e.g., c("MLBF", "Articulability"))}
 
-\item{tolerance}{Named list of tolerances for each metric (e.g., list(SBF = 0.05, Articulability = 0.2))}
+\item{tolerance}{Named list of tolerances for each metric (e.g., list(MLBF = 0.1, Articulability = 0.2))}
 
 \item{n_swaps}{Number of letters to swap}
 

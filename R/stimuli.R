@@ -2178,8 +2178,8 @@ review_anagrams <- function(anagrams)
 #' Generate unsolvable anagram(s) matched to a target
 #'
 #' @param target_anagram Character string of the anagram to match
-#' @param match_metrics Character vector of metrics to match (e.g., c("SBF", "Articulability"))
-#' @param tolerance Named list of tolerances for each metric (e.g., list(SBF = 0.05, Articulability = 0.2))
+#' @param match_metrics Character vector of metrics to match (e.g., c("MLBF", "Articulability"))
+#' @param tolerance Named list of tolerances for each metric (e.g., list(MLBF = 0.1, Articulability = 0.2))
 #' @param n_swaps Number of letters to swap
 #' @param swap_type Type of swaps: "vowels_only", "consonants_only", "either", "both"
 #' @param swap_strategy Swap strategy: "phonetic", "random", "weighted"
@@ -2192,8 +2192,8 @@ review_anagrams <- function(anagrams)
 #' @return Data frame with candidates and their properties, or NULL if none found
 #' @export
 find_matched_unsolvable <- function(target_anagram,
-                                    match_metrics = c("SBF"),
-                                    tolerance = list(SBF = 0.05),
+                                    match_metrics = c("MLBF"),           # CHANGED
+                                    tolerance = list(MLBF = 0.1),        # CHANGED
                                     n_swaps = 1,
                                     swap_type = c("either",
                                                   "vowels_only",
@@ -2205,7 +2205,7 @@ find_matched_unsolvable <- function(target_anagram,
                                     max_position_overlap = NULL,
                                     n_candidates = 1,
                                     max_attempts = 100,
-                                    sig_index = grams::sig_index)
+                                    sig_index = NULL)                    # CHANGED
 {
   swap_type <- match.arg(swap_type)
   swap_strategy <- match.arg(swap_strategy)
@@ -2222,21 +2222,55 @@ find_matched_unsolvable <- function(target_anagram,
     n_swaps <- n_letters
   }
 
+  # metrics with a dedicated fast function
+  fast_metric_fns <- list(
+    SBF            = sbf,
+    MLBF           = mlbf,
+    SLF            = slf,
+    STF            = stf,
+    MLLF           = mllf,
+    MLTF           = mltf,
+    OLD20          = old20,
+    ED1            = ed1,
+    Articulability = articulability
+  )
+
+  # compute only the metrics being matched: fast functions where          # NEW
+  # available, otherwise the full index set without the slow classifier  # NEW
+  get_metrics <- function(s) {                                           # NEW
+    out <- list()
+
+    fast <- intersect(match_metrics, names(fast_metric_fns))
+    for (m in fast) {
+      out[[m]] <- fast_metric_fns[[m]](s)
+    }
+
+    slow <- setdiff(match_metrics, fast)
+    if (length(slow) > 0) {
+      full <- compute_string_indices(s, sig_index = sig_index, classify = FALSE)
+      for (m in slow) {
+        out[[m]] <- full[[m]]
+      }
+    }
+
+    out
+  }
+
   # compute target metrics
-  target_metrics <- compute_string_indices(target_anagram)
+  target_metrics <- get_metrics(target_anagram)                          # CHANGED
 
   # store found candidates
   candidates_list <- list()
   candidates_found <- character(0)
 
-  # check if candidate meets all criteria
+  # check candidate; returns its metrics if valid, NULL otherwise        # CHANGED
   check_candidate <- function(candidate) {
     # must not have any dictionary anagrams (truly unsolvable)
     anagrams <- solve_anagram(candidate, sig_index = sig_index,
                               include_self = TRUE)
 
     if (length(anagrams) > 0) {
-      return(FALSE)
+      return(NULL)                                                       # CHANGED
     }
 
     # check distinct letter count matches
@@ -2244,17 +2278,17 @@ find_matched_unsolvable <- function(target_anagram,
     candidate_distinct <- length(unique(strsplit(tolower(candidate), "")[[1]]))
 
     if (target_distinct != candidate_distinct) {
-      return(FALSE)
+      return(NULL)                                                       # CHANGED
     }
 
     # compute candidate metrics
-    candidate_metrics <- compute_string_indices(candidate)
+    candidate_metrics <- get_metrics(candidate)                          # CHANGED
 
     # check metric tolerances
     for (metric in match_metrics) {
       if (!metric %in% names(target_metrics)) {
         warning(paste("Metric", metric, "not available"))
-        return(FALSE)
+        return(NULL)                                                     # CHANGED
       }
 
       target_val <- target_metrics[[metric]]
@@ -2262,7 +2296,7 @@ find_matched_unsolvable <- function(target_anagram,
       tol <- tolerance[[metric]]
 
       if (is.na(candidate_val) || abs(candidate_val - target_val) > tol) {
-        return(FALSE)
+        return(NULL)                                                     # CHANGED
       }
     }
 
@@ -2276,12 +2310,12 @@ find_matched_unsolvable <- function(target_anagram,
         overlap <- matches / length(target_letters)
 
         if (overlap > max_position_overlap) {
-          return(FALSE)
+          return(NULL)                                                   # CHANGED
         }
       }
     }
 
-    TRUE
+    candidate_metrics                                                    # CHANGED
   }
 
   # define letter classes
@@ -2384,13 +2418,15 @@ find_matched_unsolvable <- function(target_anagram,
     # skip if we've already found this candidate
     if (candidate %in% candidates_found) next
 
-    # check if valid
-    if (check_candidate(candidate)) {
+    # check if valid (returns metrics, or NULL)                          # CHANGED
+    candidate_metrics <- check_candidate(candidate)                      # CHANGED
+
+    if (!is.null(candidate_metrics)) {                                   # CHANGED
       target_letters <- strsplit(tolower(target_anagram), "")[[1]]
       candidate_letters_split <- strsplit(tolower(candidate), "")[[1]]
       changed_positions <- which(target_letters != candidate_letters_split)
 
-      candidate_metrics <- compute_string_indices(candidate)
+      # (second compute_string_indices() call removed)                   # CHANGED
 
       # build row for this candidate
       row_data <- list(
@@ -2454,8 +2490,8 @@ find_matched_unsolvable <- function(target_anagram,
 #' @return Data frame with unsolvable candidates and their metrics
 #' @export
 generate_unsolvable_anagrams <- function(anagrams,
-                                         match_metrics = c("SBF"),
-                                         tolerance = list(SBF = 0.05),
+                                         match_metrics = c("MLBF"),
+                                         tolerance = list(MLBF = 0.1),
                                          n_candidates = 5,
                                          n_swaps = 1,
                                          swap_type = c("either",
@@ -2467,7 +2503,7 @@ generate_unsolvable_anagrams <- function(anagrams,
                                                            "weighted"),
                                          max_position_overlap = NULL,
                                          max_attempts = 100,
-                                         sig_index = grams::sig_index)
+                                         sig_index = NULL)
 {
 
   swap_type <- match.arg(swap_type)
@@ -2581,8 +2617,11 @@ generate_unsolvable_anagrams <- function(anagrams,
       result$Unsolvable_Articulability <- sapply(result$candidate, articulability)
     } else if (metric == "Nsyllables") {
       result$Unsolvable_Nsyllables <- sapply(result$candidate, function(s) {
-        m <- compute_string_indices(s)
-        m$Nsyllables
+        compute_string_indices(s, classify = FALSE)$Nsyllables
+      })
+    } else {
+      result[[paste0("Unsolvable_", metric)]] <- sapply(result$candidate, function(s) {
+        compute_string_indices(s, classify = FALSE)[[metric]]
       })
     }
   }

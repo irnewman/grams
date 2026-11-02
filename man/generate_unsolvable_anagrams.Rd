@@ -6,15 +6,15 @@
 \usage{
 generate_unsolvable_anagrams(
   anagrams,
-  match_metrics = c("SBF"),
-  tolerance = list(SBF = 0.05),
+  match_metrics = c("MLBF"),
+  tolerance = list(MLBF = 0.1),
   n_candidates = 5,
   n_swaps = 1,
   swap_type = c("either", "vowels_only", "consonants_only", "both"),
   swap_strategy = c("phonetic", "random", "weighted"),
   max_position_overlap = NULL,
   max_attempts = 100,
-  sig_index = grams::sig_index
+  sig_index = NULL
 )
 }
 \arguments{
