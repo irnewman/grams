@@ -4,18 +4,24 @@
 \alias{load_grams_database}
 \title{Load the GRAMS database}
 \usage{
-load_grams_database()
+load_grams_database(path = NULL)
+}
+\arguments{
+\item{path}{Optional path to a database file. Defaults to the standard
+location used by \code{\link{download_grams_database}}.}
 }
 \value{
 A data frame containing the GRAMS database.
 }
 \description{
-Loads the GRAMS database from the user's app data directory. If the database
-has not been downloaded yet, an informative error is raised with instructions.
+Loads the GRAMS database from the user's app data directory, or from a
+custom path. If the database has not been downloaded yet, an informative
+error is raised with instructions.
 }
 \examples{
 \dontrun{
 GRAMS_database <- load_grams_database()
+GRAMS_database <- load_grams_database("path/to/GRAMS_database.rds")
 }
 
 }

@@ -2,19 +2,14 @@
 % Please edit documentation in R/database.R
 \name{grams_database_path}
 \alias{grams_database_path}
-\title{Get the local path to the GRAMS database}
+\title{Get path to the local GRAMS database}
 \usage{
 grams_database_path()
 }
 \value{
-A character string giving the full path to \code{GRAMS_database.rds}.
+File path (character).
 }
 \description{
-Returns the path where the GRAMS database is stored in the user's app data
-directory, creating the directory if it does not exist. This is the default
-location used by \code{\link{download_grams_database}} and
-\code{\link{load_grams_database}}.
-}
-\seealso{
-\code{\link{download_grams_database}}, \code{\link{load_grams_database}}
+The file name includes the database version, so a package update that
+needs a newer database downloads it instead of reusing an old copy.
 }

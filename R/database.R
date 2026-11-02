@@ -39,12 +39,13 @@ build_word_summary <- function(output_dir = "anagram_data")
         idx <- which(df$Anagram == df$Solution[1])
         if (length(idx) > 0) df$MLBFrank[idx] else NA_integer_
       },
-      # classification counts
-      Nwords               = sum(df$aClassification == "word",
+      # dictionary words among the anagrams, including the solution itself
+      # ("word" label is assigned by dictionary lookup, not the classifier)
+      Nwords               = sum(df$aProvisionalClass == "word", na.rm = TRUE),
+      # classifier counts (provisional)
+      Npseudowords         = sum(df$aProvisionalClass == "pseudoword",
                                  na.rm = TRUE),
-      Npseudowords         = sum(df$aClassification == "pseudoword",
-                                 na.rm = TRUE),
-      Nnonwords            = sum(df$aClassification == "nonword",
+      Nnonwords            = sum(df$aProvisionalClass == "nonword",
                                  na.rm = TRUE),
       # SBF
       aSBFmean             = mean(df$aSBF, na.rm = TRUE),
@@ -574,29 +575,34 @@ rename_csv_columns <- function(renames,
   invisible(NULL)
 }
 
-#' Get the local path to the GRAMS database
+# Database version this package version expects. Bump it when releasing a
+# new database, and attach the file to a GitHub release tagged
+# paste0("database-v", .grams_db_version).
+.grams_db_version <- "0.1.0"
+
+#' Get path to the local GRAMS database
 #'
-#' Returns the path where the GRAMS database is stored in the user's app data
-#' directory, creating the directory if it does not exist. This is the default
-#' location used by \code{\link{download_grams_database}} and
-#' \code{\link{load_grams_database}}.
+#' The file name includes the database version, so a package update that
+#' needs a newer database downloads it instead of reusing an old copy.
 #'
-#' @return A character string giving the full path to \code{GRAMS_database.rds}.
-#'
-#' @seealso \code{\link{download_grams_database}}, \code{\link{load_grams_database}}
+#' @return File path (character).
 #' @export
-grams_database_path <- function() {
-  path <- rappdirs::user_data_dir("grams")
-  if (!dir.exists(path)) dir.create(path, recursive = TRUE)
-  file.path(path, "GRAMS_database.rds")
+grams_database_path <- function()
+{
+  dir <- rappdirs::user_data_dir("grams")
+  if (!dir.exists(dir)) dir.create(dir, recursive = TRUE)
+  file.path(dir, paste0("GRAMS_database_v", .grams_db_version, ".rds"))
 }
 
 #' Download the GRAMS database
 #'
-#' Downloads the GRAMS database from OSF and saves it to the user's app data
-#' directory. The database is required for stimulus selection functions. If the
-#' database already exists locally it will not be downloaded again unless
+#' Downloads the GRAMS database from the grams GitHub release that matches
+#' this package version, and saves it to the user's app data directory. The
+#' database is required for stimulus selection functions. If the database
+#' already exists locally it will not be downloaded again unless
 #' \code{overwrite = TRUE}.
+#'
+#' The database is also archived on Zenodo for citation.
 #'
 #' @param overwrite Logical. If \code{TRUE}, download and overwrite any existing
 #'   local copy. Defaults to \code{FALSE}.
@@ -611,24 +617,63 @@ grams_database_path <- function() {
 #' }
 #'
 #' @export
-download_grams_database <- function(overwrite = FALSE) {
+download_grams_database <- function(overwrite = FALSE)
+{
   dest <- grams_database_path()
+
   if (file.exists(dest) && !overwrite) {
-    message("GRAMS database already exists at:\n  ", dest,
+    message("GRAMS database v", .grams_db_version, " already exists at:\n  ", dest,
             "\n  Use overwrite = TRUE to re-download.")
     return(invisible(dest))
   }
-  url <- "https://osf.io/s5dnp/download"
-  message("Downloading GRAMS database (~82MB) to:\n  ", dest)
-  download.file(url, dest, mode = "wb")
+
+  url <- paste0("https://github.com/irnewman/grams/releases/download/",
+                "database-v", .grams_db_version, "/GRAMS_database.rds")
+
+  # R's default 60-second timeout is too short for an 82MB file
+  old_timeout <- getOption("timeout")
+  options(timeout = max(600, old_timeout))
+  on.exit(options(timeout = old_timeout), add = TRUE)
+
+  # download to a temporary file first, so a failed download never
+  # leaves a broken file at the real path
+  tmp <- tempfile(fileext = ".rds")
+  on.exit(unlink(tmp), add = TRUE)
+
+  message("Downloading GRAMS database v", .grams_db_version, " (~100MB) to:\n  ", dest)
+
+  tryCatch(
+    utils::download.file(url, tmp, mode = "wb"),
+    error = function(e) {
+      stop("Download failed: ", conditionMessage(e), "\n  URL: ", url,
+           call. = FALSE)
+    }
+  )
+
+  # check the file is a readable database before keeping it
+  ok <- tryCatch({
+    x <- readRDS(tmp)
+    is.data.frame(x) || (is.list(x) && !is.null(x$database))
+  }, error = function(e) FALSE)
+
+  if (!ok) {
+    stop("Downloaded file is not a valid GRAMS database.\n  URL: ", url,
+         call. = FALSE)
+  }
+
+  file.copy(tmp, dest, overwrite = TRUE)
   message("Download complete.")
   invisible(dest)
 }
 
 #' Load the GRAMS database
 #'
-#' Loads the GRAMS database from the user's app data directory. If the database
-#' has not been downloaded yet, an informative error is raised with instructions.
+#' Loads the GRAMS database from the user's app data directory, or from a
+#' custom path. If the database has not been downloaded yet, an informative
+#' error is raised with instructions.
+#'
+#' @param path Optional path to a database file. Defaults to the standard
+#'   location used by \code{\link{download_grams_database}}.
 #'
 #' @return A data frame containing the GRAMS database.
 #'
@@ -637,23 +682,38 @@ download_grams_database <- function(overwrite = FALSE) {
 #' @examples
 #' \dontrun{
 #' GRAMS_database <- load_grams_database()
+#' GRAMS_database <- load_grams_database("path/to/GRAMS_database.rds")
 #' }
 #'
 #' @export
-load_grams_database <- function() {
-  path <- grams_database_path()
+load_grams_database <- function(path = NULL)
+{
+  if (is.null(path)) path <- grams_database_path()
+
   if (!file.exists(path)) {
     stop(
       "GRAMS database not found. Download it with:\n",
       "  download_grams_database()\n\n",
       "Or load from a custom path:\n",
-      "  GRAMS_database <- readRDS('path/to/GRAMS_database.rds')"
+      "  GRAMS_database <- load_grams_database('path/to/GRAMS_database.rds')",
+      call. = FALSE
     )
   }
+
   obj <- readRDS(path)
-  if (is.list(obj) && "database" %in% names(obj)) {
+
+  if (is.list(obj) && !is.data.frame(obj) && "database" %in% names(obj)) {
     message("Loading GRAMS database v", obj$version,
-            " (", format(obj$n_words, big.mark = ","), " words)")
+            " (", format(obj$n_words, big.mark = ","), " words, ",
+            format(obj$n_anagrams, big.mark = ","), " anagrams)")
+
+    if (!identical(as.character(obj$version), .grams_db_version)) {
+      warning("Database version ", obj$version, " does not match the version ",
+              "this package expects (", .grams_db_version, "). ",
+              "Run download_grams_database() to get the matching version.",
+              call. = FALSE)
+    }
+
     obj$database
   } else {
     message("Loading GRAMS database from:\n  ", path)

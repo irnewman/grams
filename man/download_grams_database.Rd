@@ -14,10 +14,14 @@ local copy. Defaults to \code{FALSE}.}
 Invisibly returns the path to the downloaded file.
 }
 \description{
-Downloads the GRAMS database from OSF and saves it to the user's app data
-directory. The database is required for stimulus selection functions. If the
-database already exists locally it will not be downloaded again unless
+Downloads the GRAMS database from the grams GitHub release that matches
+this package version, and saves it to the user's app data directory. The
+database is required for stimulus selection functions. If the database
+already exists locally it will not be downloaded again unless
 \code{overwrite = TRUE}.
+}
+\details{
+The database is also archived on Zenodo for citation.
 }
 \examples{
 \dontrun{
